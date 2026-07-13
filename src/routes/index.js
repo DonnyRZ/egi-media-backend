@@ -4,6 +4,7 @@ const UserProfile = require("./user_profile");
 const Category = require("./category");
 const Topic = require("./topic");
 const Tag = require("./tag");
+const Article = require("./article");
 
 module.exports = (server) => {
   Auth(server);
@@ -12,4 +13,5 @@ module.exports = (server) => {
   Category(server);
   Topic(server);
   Tag(server);
+  Article(server);
 };
