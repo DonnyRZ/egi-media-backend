@@ -269,6 +269,8 @@ Selalu buat branch baru dari:
 develop
 ```
 
+Lalu pull develop terlebih dahulu, baru buat branch baru.
+
 Format branch:
 
 ```
