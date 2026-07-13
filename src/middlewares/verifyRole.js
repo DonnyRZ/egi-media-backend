@@ -3,19 +3,14 @@ const wrapper = require("../helpers/utils/wrapper");
 const { ERROR } = require("../helpers/http-status/status_code");
 
 /**
- * Middleware to verify whether the authenticated user has one of the allowed roles.
- * Accepts role names (for example, `superadmin`) and numeric role IDs for backwards compatibility.
+ * Middleware to verify if the user's role matches any of the allowed roles
+ * @param {number[]} allowedRoleIds - Array of allowed role IDs (e.g. [3, 4] for super_admin and admin)
  */
-const verifyRole = (allowedRoles) => {
+const verifyRole = (allowedRoleIds) => {
   return (req, res, next) => {
     try {
-      const roleValues = [
-        req.userMeta?.role,
-        req.userMeta?.role_name,
-        req.userMeta?.role_id,
-      ].filter((value) => value !== undefined && value !== null);
-
-      if (roleValues.length === 0) {
+      // req.userMeta is populated by verifyToken middleware
+      if (!req.userMeta || !req.userMeta.role_id) {
         return wrapper.response(
           res,
           "fail",
@@ -25,13 +20,9 @@ const verifyRole = (allowedRoles) => {
         );
       }
 
-      const hasAllowedRole = roleValues.some((userRole) =>
-        allowedRoles.some(
-          (allowedRole) => String(userRole).toLowerCase() === String(allowedRole).toLowerCase()
-        )
-      );
-
-      if (!hasAllowedRole) {
+      const userRoleId = req.userMeta.role_id;
+      
+      if (!allowedRoleIds.includes(userRoleId)) {
         return wrapper.response(
           res,
           "fail",
