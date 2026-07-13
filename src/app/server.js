@@ -9,6 +9,7 @@ const pgConfig = config.get("/postgresqlUrl");
 const pgConnectionPool = require("../helpers/databases/postgresql/connection");
 const redisConnection = require("../helpers/databases/redis/connection");
 // const emailWorker = require("../helpers/queues/email.worker");
+const passport = require("passport");
 const swaggerUi = require("swagger-ui-express");
 const fs = require("fs");
 
@@ -36,6 +37,9 @@ class AppServer {
   _middlewares() {
     this.server.use(express.json());
     this.server.use(cookieParser());
+    this.server.use(passport.initialize());
+    // Inisialisasi Google OAuth strategy
+    require("../helpers/auth/google_oauth");
   }
 
   _routes() {
