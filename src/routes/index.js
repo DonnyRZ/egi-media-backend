@@ -1,5 +1,7 @@
-const UserProfile = require("./user_profile")
+const Auth = require("./auth");
+const UserProfile = require("./user_profile");
 
 module.exports = (server) => {
+  Auth(server);
   UserProfile(server);
-}
+};
