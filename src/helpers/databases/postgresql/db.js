@@ -26,6 +26,42 @@ class DB {
     }
   }
 
+  async executeTransaction(queries) {
+    let client;
+    try {
+      const pool = await pgConnection.getConnection(this.pgConfig);
+      client = await pool.connect();
+      await client.query("BEGIN");
+
+      const results = [];
+      for (const { query, values = [] } of queries) {
+        const result = await client.query(query, values);
+        if (result && result.rows) {
+          const { decryptRows } = require("../../utils/crypto_helper");
+          result.rows = decryptRows(result.rows);
+        }
+        results.push(result);
+      }
+
+      await client.query("COMMIT");
+      return results;
+    } catch (err) {
+      if (client) {
+        try {
+          await client.query("ROLLBACK");
+        } catch (rollbackError) {
+          logger.error(ctx, errorQueryMessage, "executeTransaction rollback", rollbackError);
+        }
+      }
+      logger.error(ctx, errorQueryMessage, "executeTransaction", err);
+      return null;
+    } finally {
+      if (client) {
+        client.release();
+      }
+    }
+  }
+
   async findOne(
     parameter,
     projection,

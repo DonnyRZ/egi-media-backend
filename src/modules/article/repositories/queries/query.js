@@ -109,10 +109,10 @@ class Query {
 
       const orderClause =
         sort === "oldest"
-          ? "ORDER BY a.published_at ASC"
+          ? "ORDER BY a.published_at ASC NULLS LAST"
           : sort === "popular"
-          ? "ORDER BY a.published_at DESC"
-          : "ORDER BY a.published_at DESC";
+          ? "ORDER BY (SELECT COUNT(*) FROM article_views av WHERE av.article_id = a.id) DESC, a.published_at DESC NULLS LAST"
+          : "ORDER BY a.published_at DESC NULLS LAST";
 
       const query = `
         SELECT

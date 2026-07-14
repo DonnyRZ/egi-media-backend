@@ -1,6 +1,19 @@
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const { InternalServerError } = require("../../../../helpers/errors");
 const ctx = "Article-Command";
+
+const buildRelationInsert = (table, relationColumn, articleId, relationIds) => {
+  const placeholders = relationIds.map((_, index) => `($1, $${index + 2})`).join(", ");
+  return {
+    query: `
+      INSERT INTO ${table} (article_id, ${relationColumn})
+      VALUES ${placeholders}
+      ON CONFLICT DO NOTHING
+    `,
+    values: [articleId, ...relationIds],
+  };
+};
 
 class Command {
   constructor(db) {
@@ -8,7 +21,21 @@ class Command {
   }
 
   // ─── Insert Article ───────────────────────────────────────────────────────────
-  async insertArticle({ id, author_id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at }) {
+  async insertArticle({
+    id,
+    author_id,
+    category_id,
+    series_id,
+    title,
+    slug,
+    summary,
+    content,
+    featured_image,
+    status,
+    published_at,
+    topic_ids,
+    tag_ids,
+  }) {
     try {
       const query = `
         INSERT INTO articles (
@@ -30,9 +57,21 @@ class Command {
         title, slug, summary || null, content,
         featured_image || null, status, published_at || null,
       ];
+      const queries = [{ query, values }];
 
-      const result = await this.db.executeQuery(query, values);
-      return wrapper.data(result.rows[0]);
+      if (topic_ids.length > 0) {
+        queries.push(buildRelationInsert("article_topics", "topic_id", id, topic_ids));
+      }
+      if (tag_ids.length > 0) {
+        queries.push(buildRelationInsert("article_tags", "tag_id", id, tag_ids));
+      }
+
+      const results = await this.db.executeTransaction(queries);
+      if (!results || !results[0] || results[0].rowCount === 0) {
+        return wrapper.error(new InternalServerError("Unable to create article"));
+      }
+
+      return wrapper.data(results[0].rows[0]);
     } catch (error) {
       logger.error(ctx, "insertArticle", "Error inserting article", error);
       return wrapper.error(error);
@@ -40,7 +79,7 @@ class Command {
   }
 
   // ─── Update Article ───────────────────────────────────────────────────────────
-  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, updatedFields }) {
+  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, topic_ids, tag_ids, updatedFields }) {
     try {
       const setClauses = [];
       const values = [];
@@ -107,13 +146,32 @@ class Command {
           created_at, updated_at
       `;
 
-      const result = await this.db.executeQuery(query, values);
+      const queries = [{ query, values }];
+      if (topic_ids !== undefined) {
+        queries.push({
+          query: "DELETE FROM article_topics WHERE article_id = $1",
+          values: [id],
+        });
+        if (topic_ids.length > 0) {
+          queries.push(buildRelationInsert("article_topics", "topic_id", id, topic_ids));
+        }
+      }
+      if (tag_ids !== undefined) {
+        queries.push({
+          query: "DELETE FROM article_tags WHERE article_id = $1",
+          values: [id],
+        });
+        if (tag_ids.length > 0) {
+          queries.push(buildRelationInsert("article_tags", "tag_id", id, tag_ids));
+        }
+      }
 
-      if (!result || result.rowCount === 0) {
+      const results = await this.db.executeTransaction(queries);
+      if (!results || !results[0] || results[0].rowCount === 0) {
         return wrapper.error("Article not found");
       }
 
-      return wrapper.data(result.rows[0]);
+      return wrapper.data(results[0].rows[0]);
     } catch (error) {
       logger.error(ctx, "updateArticle", "Error updating article", error);
       return wrapper.error(error);
@@ -169,73 +227,6 @@ class Command {
     }
   }
 
-  // ─── Insert Article Topics (bulk) ─────────────────────────────────────────────
-  async insertArticleTopics(article_id, topic_ids) {
-    try {
-      if (!topic_ids || topic_ids.length === 0) return wrapper.data(true);
-
-      const placeholders = topic_ids.map((_, i) => `($1, $${i + 2})`).join(", ");
-      const values = [article_id, ...topic_ids];
-
-      const query = `
-        INSERT INTO article_topics (article_id, topic_id)
-        VALUES ${placeholders}
-        ON CONFLICT DO NOTHING
-      `;
-
-      await this.db.executeQuery(query, values);
-      return wrapper.data(true);
-    } catch (error) {
-      logger.error(ctx, "insertArticleTopics", "Error inserting article topics", error);
-      return wrapper.error(error);
-    }
-  }
-
-  // ─── Delete Article Topics ────────────────────────────────────────────────────
-  async deleteArticleTopics(article_id) {
-    try {
-      const query = `DELETE FROM article_topics WHERE article_id = $1`;
-      await this.db.executeQuery(query, [article_id]);
-      return wrapper.data(true);
-    } catch (error) {
-      logger.error(ctx, "deleteArticleTopics", "Error deleting article topics", error);
-      return wrapper.error(error);
-    }
-  }
-
-  // ─── Insert Article Tags (bulk) ───────────────────────────────────────────────
-  async insertArticleTags(article_id, tag_ids) {
-    try {
-      if (!tag_ids || tag_ids.length === 0) return wrapper.data(true);
-
-      const placeholders = tag_ids.map((_, i) => `($1, $${i + 2})`).join(", ");
-      const values = [article_id, ...tag_ids];
-
-      const query = `
-        INSERT INTO article_tags (article_id, tag_id)
-        VALUES ${placeholders}
-        ON CONFLICT DO NOTHING
-      `;
-
-      await this.db.executeQuery(query, values);
-      return wrapper.data(true);
-    } catch (error) {
-      logger.error(ctx, "insertArticleTags", "Error inserting article tags", error);
-      return wrapper.error(error);
-    }
-  }
-
-  // ─── Delete Article Tags ──────────────────────────────────────────────────────
-  async deleteArticleTags(article_id) {
-    try {
-      const query = `DELETE FROM article_tags WHERE article_id = $1`;
-      await this.db.executeQuery(query, [article_id]);
-      return wrapper.data(true);
-    } catch (error) {
-      logger.error(ctx, "deleteArticleTags", "Error deleting article tags", error);
-      return wrapper.error(error);
-    }
-  }
 
   // ─── Insert Saved Article ─────────────────────────────────────────────────────
   async insertSavedArticle({ user_id, article_id }) {
