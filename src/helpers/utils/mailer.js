@@ -1,21 +1,21 @@
 const nodemailer = require("nodemailer");
+const config = require("../../config/global_config");
+
+const mailConfig = config.get("/mailConfig");
 
 const transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT),
-    secure: process.env.MAIL_SECURE == 465, // true for 465, false for other ports
+    host: mailConfig.host,
+    port: Number(mailConfig.port),
+    secure: mailConfig.secure === "true" || mailConfig.secure === true || Number(mailConfig.port) === 465,
     auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        user: mailConfig.user,
+        pass: mailConfig.pass,
     },
-    // tls: {
-    //   rejectUnauthorized: false, // 🔥 penting buat local/dev
-    // },
 });
 
 async function sendMail({ to, subject, html }) {
     return transporter.sendMail({
-        from: process.env.MAIL_FROM,
+        from: mailConfig.from,
         to,
         subject,
         html,

@@ -43,6 +43,10 @@ const googleLoginParamType = joi.object({
   origin: joi.string().allow("", null).optional(),
 });
 
+const resendVerificationParamType = joi.object({
+  email: joi.string().email().required(),
+});
+
 module.exports = {
   registerParamType,
   loginParamType,
@@ -52,4 +56,5 @@ module.exports = {
   resetPasswordParamType,
   verifyEmailParamType,
   googleLoginParamType,
+  resendVerificationParamType,
 };
