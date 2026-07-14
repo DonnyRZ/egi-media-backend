@@ -1,12 +1,13 @@
 const Redis = require("ioredis");
 const logger = require("../../utils/logger");
+const config = require("../config/global_config");
 
 let redisClient = null;
 
 const init = () => {
   if (redisClient) return redisClient;
 
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  const redisUrl = config.get("redisUrl");
 
   redisClient = new Redis(redisUrl, {
     maxRetriesPerRequest: null, // required by BullMQ
