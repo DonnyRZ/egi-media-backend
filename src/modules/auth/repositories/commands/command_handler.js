@@ -13,6 +13,7 @@ const forgotPassword = async (payload) => domain.forgotPassword(payload);
 const resetPassword = async (payload) => domain.resetPassword(payload);
 const changePassword = async (payload) => domain.changePassword(payload);
 const googleLogin = async (payload) => domain.googleLogin(payload);
+const resendVerification = async (payload) => domain.resendVerification(payload);
 
 module.exports = {
   register,
@@ -24,4 +25,5 @@ module.exports = {
   resetPassword,
   changePassword,
   googleLogin,
+  resendVerification,
 };

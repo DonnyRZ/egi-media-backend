@@ -8,6 +8,7 @@ module.exports = (server) => {
   server.post("/api/v1/auth/login", authHandler.login);
   server.post("/api/v1/auth/refresh-token", authHandler.refreshToken);
   server.get("/api/v1/auth/verify-email", authHandler.verifyEmail);
+  server.post("/api/v1/auth/resend-verification", authHandler.resendVerification);
   server.post("/api/v1/auth/forgot-password", authHandler.forgotPassword);
   server.post("/api/v1/auth/reset-password", authHandler.resetPassword);
 

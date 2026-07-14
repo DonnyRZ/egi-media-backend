@@ -11,6 +11,9 @@ const {
   UnauthorizedError,
   BadRequestError,
 } = require("../../../../helpers/errors");
+const config = require("../../../../config/global_config");
+const { addEmailJob } = require("../../../../helpers/queues/email.queue");
+const verifyEmailTemplate = require("../../../../helpers/utils/verifyEmail");
 
 const ctx = "Auth-Command-Domain";
 
@@ -56,7 +59,7 @@ class Auth {
     const verificationToken = uuidv4();
     const tokenExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 jam
 
-    await this.command.insertToken({
+    const tokenResult = await this.command.insertToken({
       id: uuidv4(),
       user_id: userId,
       token: verificationToken,
@@ -66,8 +69,27 @@ class Auth {
       created_at: now,
     });
 
-    // Log token untuk development (email service belum aktif)
-    logger.info(ctx, "register", "Email verification token generated", {
+    if (tokenResult.err) {
+      logger.error(ctx, "register", "Failed to insert verification token", tokenResult.err);
+      return wrapper.error(tokenResult.err);
+    }
+
+    // Kirim email verifikasi menggunakan queue worker
+    const appHost = config.get("/host");
+    const appPort = config.get("/port");
+    const verifyUrl = appHost.includes("localhost")
+      ? `${appHost}:${appPort}/api/v1/auth/verify-email?token=${verificationToken}`
+      : `${appHost}/api/v1/auth/verify-email?token=${verificationToken}`;
+
+    const emailHtml = verifyEmailTemplate({ name: full_name, verifyUrl });
+
+    await addEmailJob({
+      to: email,
+      subject: "Verify Your Email - Egi Media",
+      html: emailHtml,
+    });
+
+    logger.info(ctx, "register", "Email verification token generated & enqueued", {
       userId,
       verificationToken,
     });
@@ -101,6 +123,13 @@ class Auth {
     if (!user.password_hash) {
       return wrapper.error(
         new UnauthorizedError("This account uses social login. Please login with Google.")
+      );
+    }
+
+    // Cek apakah email sudah diverifikasi
+    if (!user.email_verified_at) {
+      return wrapper.error(
+        new UnauthorizedError("Please verify your email before logging in. If you didn't receive the email, please request a resend.")
       );
     }
 
@@ -378,6 +407,64 @@ class Auth {
       token_type: "Bearer",
       expires_in: 300,
     });
+  }
+
+  // ─── Resend Verification ─────────────────────────────────────────────────────
+  async resendVerification(payload) {
+    const { email } = payload;
+    const userResult = await this.query.findUserByEmail(email);
+    if (userResult.err) {
+      return wrapper.error(new NotFoundError("Email is not registered"));
+    }
+
+    const user = userResult.data;
+    if (user.email_verified_at) {
+      return wrapper.error(new BadRequestError("Email is already verified"));
+    }
+
+    if (user.login_provider !== "email") {
+      return wrapper.error(new BadRequestError("This account uses social login"));
+    }
+
+    const now = new Date();
+    const verificationToken = uuidv4();
+    const tokenExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 jam
+
+    const tokenResult = await this.command.insertToken({
+      id: uuidv4(),
+      user_id: user.id,
+      token: verificationToken,
+      type: "email_verification",
+      expires_at: tokenExpiry,
+      used_at: null,
+      created_at: now,
+    });
+
+    if (tokenResult.err) {
+      logger.error(ctx, "resendVerification", "Failed to insert verification token", tokenResult.err);
+      return wrapper.error(tokenResult.err);
+    }
+
+    const appHost = config.get("/host");
+    const appPort = config.get("/port");
+    const verifyUrl = appHost.includes("localhost")
+      ? `${appHost}:${appPort}/api/v1/auth/verify-email?token=${verificationToken}`
+      : `${appHost}/api/v1/auth/verify-email?token=${verificationToken}`;
+
+    const emailHtml = verifyEmailTemplate({ name: user.full_name, verifyUrl });
+
+    await addEmailJob({
+      to: email,
+      subject: "Verify Your Email - Egi Media",
+      html: emailHtml,
+    });
+
+    logger.info(ctx, "resendVerification", "Email verification token resent successfully", {
+      userId: user.id,
+      email,
+    });
+
+    return wrapper.data({ message: "Verification email resent successfully" });
   }
 }
 
