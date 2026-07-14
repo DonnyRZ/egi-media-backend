@@ -24,4 +24,7 @@ module.exports = (server) => {
 
   // Soft delete user (superadmin only)
   server.delete("/api/v1/users/:id", verifyToken, verifyRoleName(["superadmin"]), userHandler.deleteUser);
+
+  // Add author account (superadmin only)
+  server.post("/api/v1/admin/users", verifyToken, verifyRoleName(["superadmin"]), userHandler.addAuthor);
 };

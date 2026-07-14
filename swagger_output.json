@@ -25,6 +25,10 @@
       "description": "Authentication & Authorization"
     },
     {
+      "name": "Admin",
+      "description": "Admin-only operations (superadmin)"
+    },
+    {
       "name": "Users",
       "description": "User management"
     },
@@ -1006,6 +1010,31 @@
           }
         }
       },
+      "AddAuthorRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "full_name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "author@egimedia.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "format": "password"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 150,
+            "example": "John Author"
+          }
+        }
+      },
       "UpdateUserProfileRequest": {
         "type": "object",
         "properties": {
@@ -1299,7 +1328,7 @@
           "Auth"
         ],
         "summary": "Register a new user",
-        "description": "Registers a new user with email and password. Sends an email verification link.",
+        "description": "Registers a new user with email and password. Default role is `visitor`. Role is upgraded to `member` after subscribing. Sends an email verification link.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -1788,6 +1817,71 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Add author account (superadmin only)",
+        "description": "Creates a new user account with role `author`. Only accessible by superadmin. The author's email is automatically verified.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddAuthorRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Author account created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
           }
         }
       }

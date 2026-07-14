@@ -7,6 +7,44 @@ class Command {
     this.db = db;
   }
 
+  // ─── Insert User (digunakan oleh superadmin untuk menambah author) ──────────
+  async insertUser(document) {
+    try {
+      const query = `
+        INSERT INTO users (
+          id, email, password_hash, full_name, role,
+          login_provider, email_verified_at, last_login_at,
+          created_at, updated_at, deleted_at
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8,
+          $9, $10, $11
+        )
+        RETURNING id, email, full_name, role, login_provider, email_verified_at, last_login_at, created_at, updated_at
+      `;
+
+      const values = [
+        document.id,
+        document.email,
+        document.password_hash,
+        document.full_name,
+        document.role,
+        document.login_provider,
+        document.email_verified_at,
+        document.last_login_at,
+        document.created_at,
+        document.updated_at,
+        document.deleted_at,
+      ];
+
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(result.rows[0]);
+    } catch (error) {
+      logger.error(ctx, "insertUser", "Error inserting user", error);
+      return wrapper.error(error);
+    }
+  }
+
   // ─── Update User (full_name dan/atau role) ──────────────────────────────────
   async updateUser({ id, full_name, role }) {
     try {

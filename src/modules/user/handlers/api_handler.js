@@ -105,6 +105,21 @@ const unfollowAuthor = async (req, res) => {
   return sendResponse(result, res);
 };
 
+// ─── POST /api/v1/admin/users (superadmin: add author) ────────────────────────
+const addAuthor = async (req, res) => {
+  const payload = {
+    email: req.body.email,
+    password: req.body.password,
+    full_name: req.body.full_name,
+  };
+  const validatePayload = validator.isValidPayload(payload, commandModel.addAuthorParamType);
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await commandHandler.addAuthor(validatePayload.data);
+  return sendResponse(result, res, 201);
+};
+
 module.exports = {
   getUsers,
   getUserById,
@@ -113,4 +128,5 @@ module.exports = {
   getFollowers,
   followAuthor,
   unfollowAuthor,
+  addAuthor,
 };

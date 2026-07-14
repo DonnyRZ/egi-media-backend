@@ -7,6 +7,30 @@ class Query {
     this.db = db;
   }
 
+  // ─── Cek apakah email sudah terdaftar ──────────────────────────────────────
+  async findUserByEmail(email) {
+    try {
+      const query = `
+        SELECT id, email
+        FROM users
+        WHERE email = $1
+          AND deleted_at IS NULL
+        LIMIT 1
+      `;
+
+      const result = await this.db.executeQuery(query, [email]);
+
+      if (!result || result.rows.length === 0) {
+        return wrapper.error("User not found");
+      }
+
+      return wrapper.data(result.rows[0]);
+    } catch (error) {
+      logger.error(ctx, "findUserByEmail", "Error querying user by email", error);
+      return wrapper.error(error);
+    }
+  }
+
   // ─── List Users dengan pagination, search, filter role ─────────────────────
   async findAllUsers({ page, limit, search, role }) {
     try {
