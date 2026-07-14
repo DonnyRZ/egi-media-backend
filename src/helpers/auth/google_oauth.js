@@ -12,7 +12,7 @@ passport.use(
     {
       clientID: clientId,
       clientSecret: secretKey,
-      callbackURL: `${urlApp}/api/v1/users/google/callback`,
+      callbackURL: `${urlApp}/api/v1/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       const user = {
