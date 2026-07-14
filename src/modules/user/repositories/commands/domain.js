@@ -1,7 +1,9 @@
+const { v4: uuidv4 } = require("uuid");
 const Command = require("./command");
 const Query = require("../queries/query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const hashHelper = require("../../../../helpers/utils/hash_helper");
 const {
   NotFoundError,
   ConflictError,
@@ -119,6 +121,43 @@ class UserCommandDomain {
 
     logger.info(ctx, "unfollowAuthor", "Unfollowed author successfully", { author_id, follower_id });
     return wrapper.data(true);
+  }
+
+  // ─── Add Author (superadmin only) ───────────────────────────────────────────
+  async addAuthor(payload) {
+    const { email, password, full_name } = payload;
+
+    // Cek apakah email sudah terdaftar
+    const existingUser = await this.query.findUserByEmail(email);
+    if (!existingUser.err) {
+      return wrapper.error(new ConflictError("Email already registered"));
+    }
+
+    const passwordHash = await hashHelper.generateHash(password);
+    const now = new Date();
+    const userId = uuidv4();
+
+    const result = await this.command.insertUser({
+      id: userId,
+      email,
+      password_hash: passwordHash,
+      full_name,
+      role: "author",
+      login_provider: "email",
+      email_verified_at: now,
+      last_login_at: null,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    });
+
+    if (result.err) {
+      logger.error(ctx, "addAuthor", "Failed to insert author", result.err);
+      return wrapper.error(result.err);
+    }
+
+    logger.info(ctx, "addAuthor", "Author created successfully", { userId, email });
+    return wrapper.data(result.data);
   }
 }
 
