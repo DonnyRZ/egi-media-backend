@@ -8,7 +8,6 @@ module.exports = (server) => {
   server.get("/api/v1/articles", articleHandler.getArticles);
 
   // Detail artikel by ID (tanpa login)
-  server.get("/api/v1/articles/:id", articleHandler.getArticleById);
 
   // ─── Authenticated Routes ───────────────────────────────────────────────────
   // Artikel milik author yang login (semua status)
@@ -16,6 +15,7 @@ module.exports = (server) => {
 
   // Artikel yang disimpan oleh user yang login
   server.get("/api/v1/articles/saved", verifyToken, articleHandler.getSavedArticles);
+  server.get("/api/v1/articles/:id", articleHandler.getArticleById);
 
   // Save / unsave artikel
   server.post("/api/v1/articles/:id/save", verifyToken, articleHandler.saveArticle);

@@ -52,31 +52,15 @@ class ArticleCommandDomain {
     const id = uuidv4();
     const slug = generateSlug(title);
 
-    // Insert article
     const articleResult = await this.command.insertArticle({
       id, author_id, category_id, series_id,
       title, slug, summary, content,
-      featured_image, status, published_at,
+      featured_image, status, published_at, topic_ids, tag_ids,
     });
 
     if (articleResult.err) {
       logger.error(ctx, "createArticle", "Failed to insert article", articleResult.err);
       return wrapper.error(articleResult.err);
-    }
-
-    // Insert topics & tags (non-blocking jika gagal, tapi log error)
-    if (topic_ids && topic_ids.length > 0) {
-      const topicsResult = await this.command.insertArticleTopics(id, topic_ids);
-      if (topicsResult.err) {
-        logger.error(ctx, "createArticle", "Failed to insert article topics", topicsResult.err);
-      }
-    }
-
-    if (tag_ids && tag_ids.length > 0) {
-      const tagsResult = await this.command.insertArticleTags(id, tag_ids);
-      if (tagsResult.err) {
-        logger.error(ctx, "createArticle", "Failed to insert article tags", tagsResult.err);
-      }
     }
 
     logger.info(ctx, "createArticle", "Article created successfully", { id });
@@ -126,28 +110,12 @@ class ArticleCommandDomain {
     const updateResult = await this.command.updateArticle({
       id, category_id, series_id, title, slug,
       summary, content, featured_image, status, published_at,
-      updatedFields,
+      topic_ids, tag_ids, updatedFields,
     });
 
     if (updateResult.err) {
       logger.error(ctx, "updateArticle", "Failed to update article", updateResult.err);
       return wrapper.error(updateResult.err);
-    }
-
-    // Sync topics jika ada
-    if (topic_ids !== undefined) {
-      await this.command.deleteArticleTopics(id);
-      if (topic_ids.length > 0) {
-        await this.command.insertArticleTopics(id, topic_ids);
-      }
-    }
-
-    // Sync tags jika ada
-    if (tag_ids !== undefined) {
-      await this.command.deleteArticleTags(id);
-      if (tag_ids.length > 0) {
-        await this.command.insertArticleTags(id, tag_ids);
-      }
     }
 
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });

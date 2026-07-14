@@ -4,6 +4,7 @@ const queryHandler = require("../repositories/queries/query_handler");
 const queryModel = require("../repositories/queries/query_model");
 const validator = require("../../../helpers/utils/validator");
 const { sendResponse } = require("../../../helpers/utils/response");
+const { SUCCESS } = require("../../../helpers/http-status/status_code");
 
 // ─── GET /api/v1/articles ──────────────────────────────────────────────────────
 const getArticles = async (req, res) => {
@@ -46,7 +47,7 @@ const createArticle = async (req, res) => {
     return sendResponse(validatePayload, res);
   }
   const result = await commandHandler.createArticle(validatePayload.data);
-  return sendResponse(result, res);
+  return sendResponse(result, res, SUCCESS.CREATED);
 };
 
 // ─── GET /api/v1/articles/me ───────────────────────────────────────────────────
