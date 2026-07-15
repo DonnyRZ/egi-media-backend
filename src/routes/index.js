@@ -6,6 +6,7 @@ const Topic = require("./topic");
 const Tag = require("./tag");
 const Series = require("./series");
 const Article = require("./article");
+const Subscription = require("./subscription");
 
 module.exports = (server) => {
   Auth(server);
@@ -16,4 +17,5 @@ module.exports = (server) => {
   Tag(server);
   Series(server);
   Article(server);
+  Subscription(server);
 };
