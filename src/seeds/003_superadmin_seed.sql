@@ -2,6 +2,7 @@
 -- Password: SuperAdmin@123 (bcrypt hash)
 -- IMPORTANT: Change the password after first login in production!
 -- The application encrypts sensitive fields before querying PostgreSQL.
+-- Login email: superadmin@egimedia.com
 -- This email value is encrypted with the local .env ENCRYPTION_KEY.
 -- Regenerate it if ENCRYPTION_KEY changes.
 
