@@ -685,7 +685,7 @@
           "price": {
             "type": "number",
             "format": "double",
-            "example": 99000.00
+            "example": 99000
           },
           "duration_days": {
             "type": "integer",
@@ -1165,7 +1165,7 @@
           },
           "price": {
             "type": "number",
-            "example": 99000.00
+            "example": 99000
           },
           "duration_days": {
             "type": "integer",
@@ -4193,7 +4193,7 @@
         "tags": [
           "Newsletters"
         ],
-        "summary": "Create newsletter (superadmin only)",
+        "summary": "Create newsletter (superadmin and author)",
         "requestBody": {
           "required": true,
           "content": {
@@ -4295,7 +4295,7 @@
         "tags": [
           "Newsletters"
         ],
-        "summary": "Update newsletter (superadmin only)",
+        "summary": "Update newsletter (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
@@ -4349,7 +4349,7 @@
         "tags": [
           "Newsletters"
         ],
-        "summary": "Delete newsletter (superadmin only)",
+        "summary": "Delete newsletter (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
@@ -4383,7 +4383,7 @@
         "tags": [
           "Newsletters"
         ],
-        "summary": "Add article to newsletter (superadmin only)",
+        "summary": "Add article to newsletter (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
@@ -4439,7 +4439,7 @@
         "tags": [
           "Newsletters"
         ],
-        "summary": "Remove article from newsletter (superadmin only)",
+        "summary": "Remove article from newsletter (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
@@ -4734,7 +4734,7 @@
         "tags": [
           "YouTube"
         ],
-        "summary": "Add a YouTube video (superadmin only)",
+        "summary": "Add a YouTube video (superadmin and author)",
         "requestBody": {
           "required": true,
           "content": {
@@ -4821,7 +4821,7 @@
         "tags": [
           "YouTube"
         ],
-        "summary": "Update YouTube video (superadmin only)",
+        "summary": "Update YouTube video (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
@@ -4875,7 +4875,7 @@
         "tags": [
           "YouTube"
         ],
-        "summary": "Delete YouTube video (superadmin only)",
+        "summary": "Delete YouTube video (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
