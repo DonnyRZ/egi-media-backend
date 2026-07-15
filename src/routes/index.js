@@ -9,6 +9,7 @@ const Article = require("./article");
 const Subscription = require("./subscription");
 const Newsletter = require("./newsletter");
 const Youtube = require("./youtube");
+const AuditLog = require("./audit_log");
 
 module.exports = (server) => {
   Auth(server);
@@ -22,4 +23,5 @@ module.exports = (server) => {
   Subscription(server);
   Newsletter(server);
   Youtube(server);
+  AuditLog(server);
 };
