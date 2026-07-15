@@ -1,6 +1,9 @@
 -- Superadmin Seed
 -- Password: SuperAdmin@123 (bcrypt hash)
 -- IMPORTANT: Change the password after first login in production!
+-- The application encrypts sensitive fields before querying PostgreSQL.
+-- This email value is encrypted with the local .env ENCRYPTION_KEY.
+-- Regenerate it if ENCRYPTION_KEY changes.
 
 INSERT INTO users (
   id,
@@ -16,7 +19,7 @@ INSERT INTO users (
   deleted_at
 ) VALUES (
   '00000000-0000-4000-8000-000000000099',
-  'superadmin@egimedia.com',
+  'avT0RQ+vOz4yX++A1aMx5/mDGBn4Tt6z6qZ1cGldK4k=',
   '$2b$12$1JrYK.RZAjb3CogWQRsipu2m3O.VAdYpf./j6aQeZGu9skcWcOLju',
   'Super Admin',
   'superadmin',
