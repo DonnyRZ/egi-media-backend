@@ -4734,7 +4734,7 @@
         "tags": [
           "YouTube"
         ],
-        "summary": "Add a YouTube video (superadmin only)",
+        "summary": "Add a YouTube video (superadmin and author)",
         "requestBody": {
           "required": true,
           "content": {
@@ -4821,7 +4821,7 @@
         "tags": [
           "YouTube"
         ],
-        "summary": "Update YouTube video (superadmin only)",
+        "summary": "Update YouTube video (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
@@ -4875,7 +4875,7 @@
         "tags": [
           "YouTube"
         ],
-        "summary": "Delete YouTube video (superadmin only)",
+        "summary": "Delete YouTube video (superadmin and author)",
         "parameters": [
           {
             "$ref": "#/components/parameters/UuidPath"
