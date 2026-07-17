@@ -1,5 +1,8 @@
 const joi = require("joi");
 
+// Supported content locales. `id` (Indonesian) is the primary/default language.
+const localeParam = joi.string().valid("id", "en", "uz").default("id");
+
 // ─── Get All Published Articles ───────────────────────────────────────────────
 const getArticlesParamType = joi.object({
   page: joi.number().integer().min(1).default(1),
@@ -11,16 +14,19 @@ const getArticlesParamType = joi.object({
   author_id: joi.string().uuid().optional().allow("", null),
   series_id: joi.string().uuid().optional().allow("", null),
   sort: joi.string().valid("latest", "oldest", "popular").default("latest"),
+  lang: localeParam,
 });
 
 // ─── Get Article By ID ────────────────────────────────────────────────────────
 const getArticleByIdParamType = joi.object({
   id: joi.string().uuid().required(),
+  lang: localeParam,
 });
 
 // ─── Get Article By Slug ──────────────────────────────────────────────────────
 const getArticleBySlugParamType = joi.object({
   slug: joi.string().trim().min(1).max(255).required(),
+  lang: localeParam,
 });
 
 // ─── Get My Articles (author) ─────────────────────────────────────────────────
@@ -33,6 +39,7 @@ const getMyArticlesParamType = joi.object({
     .valid("draft", "review", "scheduled", "published", "archived")
     .optional()
     .allow("", null),
+  lang: localeParam,
 });
 
 // ─── Get Saved Articles ───────────────────────────────────────────────────────
@@ -40,6 +47,7 @@ const getSavedArticlesParamType = joi.object({
   user_id: joi.string().uuid().required(),
   page: joi.number().integer().min(1).default(1),
   limit: joi.number().integer().min(1).max(100).default(20),
+  lang: localeParam,
 });
 
 module.exports = {

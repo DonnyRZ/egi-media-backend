@@ -21,6 +21,9 @@ const generateSlug = (title) => {
   return `${base}-${uuidv4().split("-")[0]}`;
 };
 
+// Optional translated locales (Indonesian is primary and stored in base columns).
+const TRANSLATION_LOCALES = ["en", "uz"];
+
 // ─── Validasi status transition yang diizinkan ────────────────────────────────
 const ALLOWED_TRANSITIONS = {
   draft: ["review", "scheduled", "published"],
@@ -41,7 +44,7 @@ class ArticleCommandDomain {
     const {
       author_id, category_id, series_id,
       title, summary, content, featured_image,
-      status, published_at, topic_ids, tag_ids,
+      translations, status, published_at, topic_ids, tag_ids,
     } = payload;
 
     // Validasi: jika status scheduled maka published_at wajib
@@ -52,10 +55,21 @@ class ArticleCommandDomain {
     const id = uuidv4();
     const slug = generateSlug(title);
 
+    // Bangun kolom terjemahan (en/uz) beserta slug per locale bila disediakan.
+    const translationValues = {};
+    for (const loc of TRANSLATION_LOCALES) {
+      const entry = translations?.[loc];
+      if (!entry) continue;
+      translationValues[`title_${loc}`] = entry.title;
+      translationValues[`slug_${loc}`] = generateSlug(entry.title);
+      translationValues[`summary_${loc}`] = entry.summary ?? null;
+      translationValues[`content_${loc}`] = entry.content;
+    }
+
     const articleResult = await this.command.insertArticle({
       id, author_id, category_id, series_id,
       title, slug, summary, content,
-      featured_image, status, published_at, topic_ids, tag_ids,
+      featured_image, status, published_at, translationValues, topic_ids, tag_ids,
     });
 
     if (articleResult.err) {
@@ -72,7 +86,7 @@ class ArticleCommandDomain {
     const {
       id, actor_id, actor_role,
       category_id, series_id, title, summary,
-      content, featured_image, status, published_at,
+      content, featured_image, translations, status, published_at,
       topic_ids, tag_ids,
     } = payload;
 
@@ -101,6 +115,26 @@ class ArticleCommandDomain {
     if (category_id !== undefined) updatedFields.push("category_id");
     if (series_id !== undefined) updatedFields.push("series_id");
 
+    // Terjemahan opsional (en/uz): patch per field, regenerasi slug bila title diubah.
+    const translationValues = {};
+    for (const loc of TRANSLATION_LOCALES) {
+      const entry = translations?.[loc];
+      if (!entry) continue;
+      if (entry.title !== undefined) {
+        updatedFields.push(`title_${loc}`, `slug_${loc}`);
+        translationValues[`title_${loc}`] = entry.title;
+        translationValues[`slug_${loc}`] = generateSlug(entry.title);
+      }
+      if (entry.summary !== undefined) {
+        updatedFields.push(`summary_${loc}`);
+        translationValues[`summary_${loc}`] = entry.summary ?? null;
+      }
+      if (entry.content !== undefined) {
+        updatedFields.push(`content_${loc}`);
+        translationValues[`content_${loc}`] = entry.content;
+      }
+    }
+
     if (updatedFields.length === 0 && topic_ids === undefined && tag_ids === undefined) {
       return wrapper.error(new BadRequestError("At least one field must be provided"));
     }
@@ -109,7 +143,7 @@ class ArticleCommandDomain {
 
     const updateResult = await this.command.updateArticle({
       id, category_id, series_id, title, slug,
-      summary, content, featured_image, status, published_at,
+      summary, content, featured_image, translationValues, status, published_at,
       topic_ids, tag_ids, updatedFields,
     });
 

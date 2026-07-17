@@ -1,5 +1,25 @@
 const joi = require("joi");
 
+// ─── Translations ─────────────────────────────────────────────────────────────
+// Indonesian (id) is the primary language and lives in the top-level fields.
+// English (en) and Uzbek (uz) are optional. A translation is only meaningful when
+// it has both a title and content, so both are required together when a locale is
+// provided on create.
+const createTranslationEntry = joi.object({
+  title: joi.string().max(255).required(),
+  summary: joi.string().optional().allow(null, ""),
+  content: joi.string().required(),
+});
+
+// On update every field is optional so callers can patch a single translated field.
+const updateTranslationEntry = joi
+  .object({
+    title: joi.string().max(255).optional(),
+    summary: joi.string().optional().allow(null, ""),
+    content: joi.string().optional(),
+  })
+  .min(1);
+
 // ─── Create Article ───────────────────────────────────────────────────────────
 const createArticleParamType = joi.object({
   author_id: joi.string().uuid().required(),
@@ -9,6 +29,12 @@ const createArticleParamType = joi.object({
   summary: joi.string().optional().allow(null, ""),
   content: joi.string().required(),
   featured_image: joi.string().uri().optional().allow(null, ""),
+  translations: joi
+    .object({
+      en: createTranslationEntry.optional(),
+      uz: createTranslationEntry.optional(),
+    })
+    .optional(),
   status: joi
     .string()
     .valid("draft", "review", "scheduled", "published", "archived")
@@ -29,6 +55,12 @@ const updateArticleParamType = joi.object({
   summary: joi.string().optional().allow(null, ""),
   content: joi.string().optional(),
   featured_image: joi.string().uri().optional().allow(null, ""),
+  translations: joi
+    .object({
+      en: updateTranslationEntry.optional(),
+      uz: updateTranslationEntry.optional(),
+    })
+    .optional(),
   status: joi
     .string()
     .valid("draft", "review", "scheduled", "published", "archived")

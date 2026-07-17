@@ -64,7 +64,11 @@ class Query {
       let idx = 1;
 
       if (search) {
-        conditions.push(`(a.title ILIKE $${idx} OR a.summary ILIKE $${idx})`);
+        conditions.push(`(
+          a.title ILIKE $${idx} OR a.summary ILIKE $${idx}
+          OR a.title_en ILIKE $${idx} OR a.summary_en ILIKE $${idx}
+          OR a.title_uz ILIKE $${idx} OR a.summary_uz ILIKE $${idx}
+        )`);
         values.push(`%${search}%`);
         idx++;
       }
@@ -120,6 +124,12 @@ class Query {
           a.title,
           a.slug,
           a.summary,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
           a.featured_image,
           a.status,
           a.published_at,
@@ -154,7 +164,11 @@ class Query {
       let idx = 1;
 
       if (search) {
-        conditions.push(`(a.title ILIKE $${idx} OR a.summary ILIKE $${idx})`);
+        conditions.push(`(
+          a.title ILIKE $${idx} OR a.summary ILIKE $${idx}
+          OR a.title_en ILIKE $${idx} OR a.summary_en ILIKE $${idx}
+          OR a.title_uz ILIKE $${idx} OR a.summary_uz ILIKE $${idx}
+        )`);
         values.push(`%${search}%`);
         idx++;
       }
@@ -221,6 +235,14 @@ class Query {
           a.slug,
           a.summary,
           a.content,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.content_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
+          a.content_uz,
           a.featured_image,
           a.status,
           a.published_at,
@@ -278,6 +300,14 @@ class Query {
           a.slug,
           a.summary,
           a.content,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.content_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
+          a.content_uz,
           a.featured_image,
           a.status,
           a.published_at,
@@ -307,7 +337,7 @@ class Query {
         INNER JOIN users u ON u.id = a.author_id
         LEFT JOIN categories c ON c.id = a.category_id
         LEFT JOIN series s ON s.id = a.series_id
-        WHERE a.slug = $1
+        WHERE (a.slug = $1 OR a.slug_en = $1 OR a.slug_uz = $1)
           AND a.status = 'published'
           AND a.deleted_at IS NULL
         LIMIT 1
@@ -424,6 +454,12 @@ class Query {
           a.title,
           a.slug,
           a.summary,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
           a.featured_image,
           a.status,
           a.published_at,
@@ -490,6 +526,12 @@ class Query {
           a.title,
           a.slug,
           a.summary,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
           a.featured_image,
           a.status,
           a.published_at,

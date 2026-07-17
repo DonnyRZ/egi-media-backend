@@ -15,6 +15,12 @@ const buildRelationInsert = (table, relationColumn, articleId, relationIds) => {
   };
 };
 
+// Translatable columns for the optional en/uz locales (id lives in the base columns).
+const TRANSLATION_COLUMNS = [
+  "title_en", "slug_en", "summary_en", "content_en",
+  "title_uz", "slug_uz", "summary_uz", "content_uz",
+];
+
 class Command {
   constructor(db) {
     this.db = db;
@@ -33,6 +39,7 @@ class Command {
     featured_image,
     status,
     published_at,
+    translationValues,
     topic_ids,
     tag_ids,
   }) {
@@ -42,13 +49,21 @@ class Command {
           id, author_id, category_id, series_id,
           title, slug, summary, content,
           featured_image, status, published_at,
+          title_en, slug_en, summary_en, content_en,
+          title_uz, slug_uz, summary_uz, content_uz,
           created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+          $12, $13, $14, $15, $16, $17, $18, $19,
+          NOW(), NOW()
+        )
         RETURNING
           id, author_id, category_id, series_id,
           title, slug, summary, content,
           featured_image, status, published_at,
+          title_en, slug_en, summary_en, content_en,
+          title_uz, slug_uz, summary_uz, content_uz,
           created_at, updated_at
       `;
 
@@ -56,6 +71,7 @@ class Command {
         id, author_id, category_id || null, series_id || null,
         title, slug, summary || null, content,
         featured_image || null, status, published_at || null,
+        ...TRANSLATION_COLUMNS.map((col) => translationValues?.[col] ?? null),
       ];
       const queries = [{ query, values }];
 
@@ -79,7 +95,7 @@ class Command {
   }
 
   // ─── Update Article ───────────────────────────────────────────────────────────
-  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, topic_ids, tag_ids, updatedFields }) {
+  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, translationValues, topic_ids, tag_ids, updatedFields }) {
     try {
       const setClauses = [];
       const values = [];
@@ -131,6 +147,14 @@ class Command {
         idx++;
       }
 
+      for (const col of TRANSLATION_COLUMNS) {
+        if (updatedFields.includes(col)) {
+          setClauses.push(`${col} = $${idx}`);
+          values.push(translationValues?.[col] ?? null);
+          idx++;
+        }
+      }
+
       setClauses.push(`updated_at = NOW()`);
       values.push(id);
 
@@ -143,6 +167,8 @@ class Command {
           id, author_id, category_id, series_id,
           title, slug, summary, content,
           featured_image, status, published_at,
+          title_en, slug_en, summary_en, content_en,
+          title_uz, slug_uz, summary_uz, content_uz,
           created_at, updated_at
       `;
 
