@@ -4,6 +4,29 @@ const Query = require("../queries/query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const { InternalServerError, NotFoundError } = require("../../../../helpers/errors");
 
+const TRANSLATION_LOCALES = ["en", "uz"];
+
+const buildTranslationValues = (translations, { patch = false } = {}) => {
+  const translationValues = {};
+  const updatedTranslationFields = [];
+
+  for (const loc of TRANSLATION_LOCALES) {
+    const entry = translations?.[loc];
+    if (!entry) continue;
+
+    if (!patch || entry.title !== undefined) {
+      translationValues[`title_${loc}`] = entry.title ?? null;
+      updatedTranslationFields.push(`title_${loc}`);
+    }
+    if (!patch || entry.description !== undefined) {
+      translationValues[`description_${loc}`] = entry.description ?? null;
+      updatedTranslationFields.push(`description_${loc}`);
+    }
+  }
+
+  return { translationValues, updatedTranslationFields };
+};
+
 class YoutubeCommandDomain {
   constructor(db) {
     this.command = new Command(db);
@@ -11,12 +34,18 @@ class YoutubeCommandDomain {
   }
 
   async addYoutubeVideo(payload) {
+    const { translationValues } = buildTranslationValues(payload.translations);
+
     const result = await this.command.insertOne({
       id: randomUUID(),
       title: payload.title,
       description: payload.description || null,
       url: payload.url,
       created_at: new Date(),
+      title_en: translationValues.title_en ?? null,
+      description_en: translationValues.description_en ?? null,
+      title_uz: translationValues.title_uz ?? null,
+      description_uz: translationValues.description_uz ?? null,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to add YouTube video"));
@@ -33,11 +62,18 @@ class YoutubeCommandDomain {
       return wrapper.error(new NotFoundError("YouTube video not found"));
     }
 
+    const { translationValues, updatedTranslationFields } = buildTranslationValues(
+      payload.translations,
+      { patch: true }
+    );
+
     const result = await this.command.updateOne({
       id: payload.id,
       title: payload.title,
       description: payload.description || null,
       url: payload.url,
+      translationValues,
+      updatedTranslationFields,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to update YouTube video"));

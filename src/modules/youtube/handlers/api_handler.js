@@ -13,7 +13,10 @@ const listYoutubeVideos = async (req, res) => {
 };
 
 const getYoutubeVideo = async (req, res) => {
-  const payload = validator.isValidPayload(req.params, queryModel.getVideoParamType);
+  const payload = validator.isValidPayload(
+    { id: req.params.id, lang: req.query.lang },
+    queryModel.getVideoParamType
+  );
   if (payload.err) return sendResponse(payload, res);
   return sendResponse(await queryHandler.getYoutubeVideo(payload.data), res);
 };
