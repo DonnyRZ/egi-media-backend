@@ -1,5 +1,11 @@
 const collection = "youtube_videos";
 
+const SELECT_COLUMNS = `
+  id, title, description, url,
+  title_en, description_en, title_uz, description_uz,
+  created_at
+`;
+
 class YoutubeQuery {
   constructor(db) {
     this.db = db;
@@ -10,9 +16,14 @@ class YoutubeQuery {
     const searchValue = search ? `%${search}%` : null;
 
     const rowsQuery = `
-      SELECT id, title, description, url, created_at
+      SELECT ${SELECT_COLUMNS}
       FROM ${collection}
-      WHERE ($1::text IS NULL OR title ILIKE $1 OR description ILIKE $1)
+      WHERE (
+        $1::text IS NULL
+        OR title ILIKE $1 OR description ILIKE $1
+        OR title_en ILIKE $1 OR description_en ILIKE $1
+        OR title_uz ILIKE $1 OR description_uz ILIKE $1
+      )
       ORDER BY title ASC, id ASC
       LIMIT $2 OFFSET $3;
     `;
@@ -20,7 +31,12 @@ class YoutubeQuery {
     const countQuery = `
       SELECT COUNT(*)::int AS total
       FROM ${collection}
-      WHERE ($1::text IS NULL OR title ILIKE $1 OR description ILIKE $1);
+      WHERE (
+        $1::text IS NULL
+        OR title ILIKE $1 OR description ILIKE $1
+        OR title_en ILIKE $1 OR description_en ILIKE $1
+        OR title_uz ILIKE $1 OR description_uz ILIKE $1
+      );
     `;
 
     const [rows, count] = await Promise.all([
@@ -33,7 +49,7 @@ class YoutubeQuery {
 
   async findOneById(id) {
     return this.db.executeQuery(
-      `SELECT id, title, description, url, created_at
+      `SELECT ${SELECT_COLUMNS}
        FROM ${collection}
        WHERE id = $1
        LIMIT 1;`,
