@@ -66,11 +66,18 @@ const saveArticleParamType = joi.object({
 // ─── Share Article ────────────────────────────────────────────────────────────
 const shareArticleParamType = joi.object({
   id: joi.string().uuid().required(),
-  user_id: joi.string().uuid().required(),
+  user_id: joi.string().uuid().optional().allow(null),
   platform: joi
     .string()
-    .valid("twitter", "facebook", "linkedin", "whatsapp", "copy_link")
+    .valid("twitter", "facebook", "linkedin", "whatsapp", "telegram", "copy_link")
     .required(),
+});
+
+// ─── Record Article View ──────────────────────────────────────────────────────
+const recordArticleViewParamType = joi.object({
+  id: joi.string().uuid().required(),
+  user_id: joi.string().uuid().optional().allow(null),
+  ip_address: joi.string().max(64).optional().allow(null, ""),
 });
 
 module.exports = {
@@ -80,4 +87,5 @@ module.exports = {
   changeStatusParamType,
   saveArticleParamType,
   shareArticleParamType,
+  recordArticleViewParamType,
 };

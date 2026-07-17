@@ -274,10 +274,26 @@ class Command {
         VALUES ($1, $2, $3, $4, NOW())
       `;
 
-      await this.db.executeQuery(query, [id, article_id, user_id, platform]);
+      await this.db.executeQuery(query, [id, article_id, user_id || null, platform]);
       return wrapper.data(true);
     } catch (error) {
       logger.error(ctx, "insertArticleShare", "Error recording article share", error);
+      return wrapper.error(error);
+    }
+  }
+
+  // ─── Insert Article View ──────────────────────────────────────────────────────
+  async insertArticleView({ id, article_id, user_id, ip_address }) {
+    try {
+      const query = `
+        INSERT INTO article_views (id, article_id, user_id, ip_address, viewed_at)
+        VALUES ($1, $2, $3, $4, NOW())
+      `;
+
+      await this.db.executeQuery(query, [id, article_id, user_id || null, ip_address || null]);
+      return wrapper.data(true);
+    } catch (error) {
+      logger.error(ctx, "insertArticleView", "Error recording article view", error);
       return wrapper.error(error);
     }
   }

@@ -18,6 +18,11 @@ const getArticleByIdParamType = joi.object({
   id: joi.string().uuid().required(),
 });
 
+// ─── Get Article By Slug ──────────────────────────────────────────────────────
+const getArticleBySlugParamType = joi.object({
+  slug: joi.string().trim().min(1).max(255).required(),
+});
+
 // ─── Get My Articles (author) ─────────────────────────────────────────────────
 const getMyArticlesParamType = joi.object({
   author_id: joi.string().uuid().required(),
@@ -40,6 +45,7 @@ const getSavedArticlesParamType = joi.object({
 module.exports = {
   getArticlesParamType,
   getArticleByIdParamType,
+  getArticleBySlugParamType,
   getMyArticlesParamType,
   getSavedArticlesParamType,
 };

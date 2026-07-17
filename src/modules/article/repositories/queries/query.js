@@ -243,7 +243,9 @@ class Query {
           s.name AS series_name,
           s.slug AS series_slug,
           s.description AS series_description,
-          s.created_at AS series_created_at
+          s.created_at AS series_created_at,
+          (SELECT COUNT(*)::int FROM article_views av WHERE av.article_id = a.id) AS view_count,
+          (SELECT COUNT(*)::int FROM article_shares ash WHERE ash.article_id = a.id) AS share_count
         FROM articles a
         INNER JOIN users u ON u.id = a.author_id
         LEFT JOIN categories c ON c.id = a.category_id
@@ -262,6 +264,94 @@ class Query {
       return wrapper.data(result.rows[0]);
     } catch (error) {
       logger.error(ctx, "findArticleById", "Error querying article by id", error);
+      return wrapper.error(error);
+    }
+  }
+
+  // ─── Get Article Detail By Slug (published) ───────────────────────────────────
+  async findArticleBySlug(slug) {
+    try {
+      const query = `
+        SELECT
+          a.id,
+          a.title,
+          a.slug,
+          a.summary,
+          a.content,
+          a.featured_image,
+          a.status,
+          a.published_at,
+          a.created_at,
+          a.updated_at,
+          a.author_id,
+          a.category_id,
+          a.series_id,
+          u.id AS author_id,
+          u.full_name AS author_full_name,
+          u.email AS author_email,
+          u.role AS author_role,
+          c.id AS cat_id,
+          c.name AS cat_name,
+          c.slug AS cat_slug,
+          c.description AS cat_description,
+          c.created_at AS cat_created_at,
+          c.updated_at AS cat_updated_at,
+          s.id AS series_id,
+          s.name AS series_name,
+          s.slug AS series_slug,
+          s.description AS series_description,
+          s.created_at AS series_created_at,
+          (SELECT COUNT(*)::int FROM article_views av WHERE av.article_id = a.id) AS view_count,
+          (SELECT COUNT(*)::int FROM article_shares ash WHERE ash.article_id = a.id) AS share_count
+        FROM articles a
+        INNER JOIN users u ON u.id = a.author_id
+        LEFT JOIN categories c ON c.id = a.category_id
+        LEFT JOIN series s ON s.id = a.series_id
+        WHERE a.slug = $1
+          AND a.status = 'published'
+          AND a.deleted_at IS NULL
+        LIMIT 1
+      `;
+
+      const result = await this.db.executeQuery(query, [slug]);
+
+      if (!result || result.rows.length === 0) {
+        return wrapper.error("Article not found");
+      }
+
+      return wrapper.data(result.rows[0]);
+    } catch (error) {
+      logger.error(ctx, "findArticleBySlug", "Error querying article by slug", error);
+      return wrapper.error(error);
+    }
+  }
+
+  async countArticleViews(article_id) {
+    try {
+      const query = `
+        SELECT COUNT(*)::int AS total
+        FROM article_views
+        WHERE article_id = $1
+      `;
+      const result = await this.db.executeQuery(query, [article_id]);
+      return wrapper.data(result.rows[0]?.total || 0);
+    } catch (error) {
+      logger.error(ctx, "countArticleViews", "Error counting article views", error);
+      return wrapper.error(error);
+    }
+  }
+
+  async countArticleShares(article_id) {
+    try {
+      const query = `
+        SELECT COUNT(*)::int AS total
+        FROM article_shares
+        WHERE article_id = $1
+      `;
+      const result = await this.db.executeQuery(query, [article_id]);
+      return wrapper.data(result.rows[0]?.total || 0);
+    } catch (error) {
+      logger.error(ctx, "countArticleShares", "Error counting article shares", error);
       return wrapper.error(error);
     }
   }

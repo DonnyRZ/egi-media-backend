@@ -58,24 +58,8 @@ class ArticleQueryDomain {
   }
 
   // ─── Get Article Detail By ID ───────────────────────────────────────────────
-  async getArticleById(payload) {
-    const { id } = payload;
-
-    const articleResult = await this.query.findArticleById(id);
-
-    if (articleResult.err) {
-      logger.error(ctx, "getArticleById", "Article not found", { id });
-      return wrapper.error(new NotFoundError("Article not found"));
-    }
-
-    const [topicsResult, tagsResult] = await Promise.all([
-      this.query.findArticleTopics(id),
-      this.query.findArticleTags(id),
-    ]);
-
-    const row = articleResult.data;
-
-    const article = {
+  mapArticleDetail(row, topics, tags) {
+    return {
       id: row.id,
       title: row.title,
       slug: row.slug,
@@ -86,6 +70,8 @@ class ArticleQueryDomain {
       published_at: row.published_at || null,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      view_count: row.view_count || 0,
+      share_count: row.share_count || 0,
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
@@ -111,11 +97,59 @@ class ArticleQueryDomain {
             created_at: row.series_created_at,
           }
         : null,
-      topics: topicsResult.err ? [] : topicsResult.data,
-      tags: tagsResult.err ? [] : tagsResult.data,
+      topics: topics || [],
+      tags: tags || [],
     };
+  }
+
+  async getArticleById(payload) {
+    const { id } = payload;
+
+    const articleResult = await this.query.findArticleById(id);
+
+    if (articleResult.err) {
+      logger.error(ctx, "getArticleById", "Article not found", { id });
+      return wrapper.error(new NotFoundError("Article not found"));
+    }
+
+    const [topicsResult, tagsResult] = await Promise.all([
+      this.query.findArticleTopics(id),
+      this.query.findArticleTags(id),
+    ]);
+
+    const article = this.mapArticleDetail(
+      articleResult.data,
+      topicsResult.err ? [] : topicsResult.data,
+      tagsResult.err ? [] : tagsResult.data
+    );
 
     logger.info(ctx, "getArticleById", "Fetched article successfully", { id });
+    return wrapper.data(article);
+  }
+
+  async getArticleBySlug(payload) {
+    const { slug } = payload;
+
+    const articleResult = await this.query.findArticleBySlug(slug);
+
+    if (articleResult.err) {
+      logger.error(ctx, "getArticleBySlug", "Article not found", { slug });
+      return wrapper.error(new NotFoundError("Article not found"));
+    }
+
+    const id = articleResult.data.id;
+    const [topicsResult, tagsResult] = await Promise.all([
+      this.query.findArticleTopics(id),
+      this.query.findArticleTags(id),
+    ]);
+
+    const article = this.mapArticleDetail(
+      articleResult.data,
+      topicsResult.err ? [] : topicsResult.data,
+      tagsResult.err ? [] : tagsResult.data
+    );
+
+    logger.info(ctx, "getArticleBySlug", "Fetched article successfully", { slug, id });
     return wrapper.data(article);
   }
 

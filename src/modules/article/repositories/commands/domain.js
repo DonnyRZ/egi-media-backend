@@ -253,14 +253,51 @@ class ArticleCommandDomain {
     }
 
     const shareId = uuidv4();
-    const result = await this.command.insertArticleShare({ id: shareId, article_id, user_id, platform });
+    const result = await this.command.insertArticleShare({
+      id: shareId,
+      article_id,
+      user_id: user_id || null,
+      platform,
+    });
     if (result.err) {
       logger.error(ctx, "shareArticle", "Failed to record article share", result.err);
       return wrapper.error(result.err);
     }
 
+    const countResult = await this.query.countArticleShares(article_id);
+    const share_count = countResult.err ? null : countResult.data;
+
     logger.info(ctx, "shareArticle", "Article share recorded", { article_id, user_id, platform });
-    return wrapper.data(true);
+    return wrapper.data({ share_count });
+  }
+
+  // ─── Record Article View ────────────────────────────────────────────────────
+  async recordArticleView(payload) {
+    const { id: article_id, user_id, ip_address } = payload;
+
+    const articleExists = await this.query.findArticleExistsById(article_id);
+    if (articleExists.err) {
+      logger.error(ctx, "recordArticleView", "Article not found", { article_id });
+      return wrapper.error(new NotFoundError("Article not found"));
+    }
+
+    const viewId = uuidv4();
+    const result = await this.command.insertArticleView({
+      id: viewId,
+      article_id,
+      user_id: user_id || null,
+      ip_address: ip_address || null,
+    });
+    if (result.err) {
+      logger.error(ctx, "recordArticleView", "Failed to record article view", result.err);
+      return wrapper.error(result.err);
+    }
+
+    const countResult = await this.query.countArticleViews(article_id);
+    const view_count = countResult.err ? null : countResult.data;
+
+    logger.info(ctx, "recordArticleView", "Article view recorded", { article_id });
+    return wrapper.data({ view_count });
   }
 }
 
