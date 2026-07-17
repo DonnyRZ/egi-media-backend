@@ -11,6 +11,7 @@ const changeStatus = async (payload) => domain.changeStatus(payload);
 const saveArticle = async (payload) => domain.saveArticle(payload);
 const unsaveArticle = async (payload) => domain.unsaveArticle(payload);
 const shareArticle = async (payload) => domain.shareArticle(payload);
+const recordArticleView = async (payload) => domain.recordArticleView(payload);
 
 module.exports = {
   createArticle,
@@ -20,4 +21,5 @@ module.exports = {
   saveArticle,
   unsaveArticle,
   shareArticle,
+  recordArticleView,
 };

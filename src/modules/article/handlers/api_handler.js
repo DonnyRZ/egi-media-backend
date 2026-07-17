@@ -18,6 +18,7 @@ const getArticles = async (req, res) => {
     author_id: req.query.author_id,
     series_id: req.query.series_id,
     sort: req.query.sort,
+    lang: req.query.lang,
   };
   const validatePayload = validator.isValidPayload(payload, queryModel.getArticlesParamType);
   if (validatePayload.err) {
@@ -37,6 +38,7 @@ const createArticle = async (req, res) => {
     summary: req.body.summary,
     content: req.body.content,
     featured_image: req.body.featured_image,
+    translations: req.body.translations,
     status: req.body.status,
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
@@ -57,6 +59,7 @@ const getMyArticles = async (req, res) => {
     page: req.query.page,
     limit: req.query.limit,
     status: req.query.status,
+    lang: req.query.lang,
   };
   const validatePayload = validator.isValidPayload(payload, queryModel.getMyArticlesParamType);
   if (validatePayload.err) {
@@ -72,6 +75,7 @@ const getSavedArticles = async (req, res) => {
     user_id: req.userMeta?.id,
     page: req.query.page,
     limit: req.query.limit,
+    lang: req.query.lang,
   };
   const validatePayload = validator.isValidPayload(payload, queryModel.getSavedArticlesParamType);
   if (validatePayload.err) {
@@ -85,12 +89,42 @@ const getSavedArticles = async (req, res) => {
 const getArticleById = async (req, res) => {
   const payload = {
     id: req.params.id,
+    lang: req.query.lang,
   };
   const validatePayload = validator.isValidPayload(payload, queryModel.getArticleByIdParamType);
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
   const result = await queryHandler.getArticleById(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── GET /api/v1/articles/slug/:slug ──────────────────────────────────────────
+const getArticleBySlug = async (req, res) => {
+  const payload = {
+    slug: req.params.slug,
+    lang: req.query.lang,
+  };
+  const validatePayload = validator.isValidPayload(payload, queryModel.getArticleBySlugParamType);
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getArticleBySlug(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── POST /api/v1/articles/:id/view ───────────────────────────────────────────
+const recordArticleView = async (req, res) => {
+  const payload = {
+    id: req.params.id,
+    user_id: req.userMeta?.id || null,
+    ip_address: req.headers["x-forwarded-for"] || req.socket?.remoteAddress || null,
+  };
+  const validatePayload = validator.isValidPayload(payload, commandModel.recordArticleViewParamType);
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await commandHandler.recordArticleView(validatePayload.data);
   return sendResponse(result, res);
 };
 
@@ -106,6 +140,7 @@ const updateArticle = async (req, res) => {
     summary: req.body.summary,
     content: req.body.content,
     featured_image: req.body.featured_image,
+    translations: req.body.translations,
     status: req.body.status,
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
@@ -183,7 +218,7 @@ const unsaveArticle = async (req, res) => {
 const shareArticle = async (req, res) => {
   const payload = {
     id: req.params.id,
-    user_id: req.userMeta?.id,
+    user_id: req.userMeta?.id || null,
     platform: req.body.platform,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.shareArticleParamType);
@@ -200,10 +235,12 @@ module.exports = {
   getMyArticles,
   getSavedArticles,
   getArticleById,
+  getArticleBySlug,
   updateArticle,
   deleteArticle,
   changeArticleStatus,
   saveArticle,
   unsaveArticle,
   shareArticle,
+  recordArticleView,
 };

@@ -4,28 +4,27 @@ const articleHandler = require("../modules/article/handlers/api_handler");
 
 module.exports = (server) => {
   // ─── Public Routes ──────────────────────────────────────────────────────────
-  // List semua artikel yang sudah published (tanpa login)
   server.get("/api/v1/articles", articleHandler.getArticles);
 
-  // Detail artikel by ID (tanpa login)
+  // Static path segments must be registered before /:id
+  server.get("/api/v1/articles/slug/:slug", articleHandler.getArticleBySlug);
 
-  // ─── Authenticated Routes ───────────────────────────────────────────────────
-  // Artikel milik author yang login (semua status)
+  // ─── Authenticated list routes (before /:id) ────────────────────────────────
   server.get("/api/v1/articles/me", verifyToken, articleHandler.getMyArticles);
-
-  // Artikel yang disimpan oleh user yang login
   server.get("/api/v1/articles/saved", verifyToken, articleHandler.getSavedArticles);
+
+  // Detail by ID
   server.get("/api/v1/articles/:id", articleHandler.getArticleById);
 
-  // Save / unsave artikel
+  // Public engagement
+  server.post("/api/v1/articles/:id/view", articleHandler.recordArticleView);
+  server.post("/api/v1/articles/:id/share", articleHandler.shareArticle);
+
+  // Save / unsave
   server.post("/api/v1/articles/:id/save", verifyToken, articleHandler.saveArticle);
   server.delete("/api/v1/articles/:id/save", verifyToken, articleHandler.unsaveArticle);
 
-  // Catat share event
-  server.post("/api/v1/articles/:id/share", verifyToken, articleHandler.shareArticle);
-
   // ─── Author & Superadmin Routes ─────────────────────────────────────────────
-  // Buat artikel baru
   server.post(
     "/api/v1/articles",
     verifyToken,
@@ -33,7 +32,6 @@ module.exports = (server) => {
     articleHandler.createArticle
   );
 
-  // Update artikel
   server.put(
     "/api/v1/articles/:id",
     verifyToken,
@@ -41,7 +39,6 @@ module.exports = (server) => {
     articleHandler.updateArticle
   );
 
-  // Soft delete artikel
   server.delete(
     "/api/v1/articles/:id",
     verifyToken,
@@ -49,7 +46,6 @@ module.exports = (server) => {
     articleHandler.deleteArticle
   );
 
-  // Ubah status artikel
   server.patch(
     "/api/v1/articles/:id/status",
     verifyToken,
