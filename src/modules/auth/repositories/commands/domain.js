@@ -74,24 +74,26 @@ class Auth {
       return wrapper.error(tokenResult.err);
     }
 
-    // Kirim email verifikasi menggunakan queue worker
-    const appHost = config.get("/host");
-    const appPort = config.get("/port");
-    const verifyUrl = appHost.includes("localhost")
-      ? `${appHost}:${appPort}/api/v1/auth/verify-email?token=${verificationToken}`
-      : `${appHost}/api/v1/auth/verify-email?token=${verificationToken}`;
+    // Kirim email verifikasi — link mengarah ke frontend Next.js
+    const frontendUrl = config.get("/frontendUrl") || "http://localhost:3000";
+    const verifyUrl = `${frontendUrl.replace(/\/$/, "")}/id/verify-email?token=${verificationToken}`;
 
     const emailHtml = verifyEmailTemplate({ name: full_name, verifyUrl });
 
-    await addEmailJob({
+    // Always log the verify URL so local/dev can complete verification without SMTP/Redis.
+    logger.info(ctx, "register", "Email verification token generated", {
+      userId,
+      verificationToken,
+      verifyUrl,
+    });
+
+    // Fire-and-forget: never block registration on mail delivery.
+    void addEmailJob({
       to: email,
       subject: "Verify Your Email - Egi Media",
       html: emailHtml,
-    });
-
-    logger.info(ctx, "register", "Email verification token generated & enqueued", {
-      userId,
-      verificationToken,
+    }).catch((emailError) => {
+      logger.error(ctx, "register", "Failed to send verification email", emailError);
     });
 
     logger.info(ctx, "register", "User registered successfully", { userId, email });
@@ -445,23 +447,24 @@ class Auth {
       return wrapper.error(tokenResult.err);
     }
 
-    const appHost = config.get("/host");
-    const appPort = config.get("/port");
-    const verifyUrl = appHost.includes("localhost")
-      ? `${appHost}:${appPort}/api/v1/auth/verify-email?token=${verificationToken}`
-      : `${appHost}/api/v1/auth/verify-email?token=${verificationToken}`;
+    const frontendUrl = config.get("/frontendUrl") || "http://localhost:3000";
+    const verifyUrl = `${frontendUrl.replace(/\/$/, "")}/id/verify-email?token=${verificationToken}`;
 
     const emailHtml = verifyEmailTemplate({ name: user.full_name, verifyUrl });
 
-    await addEmailJob({
+    logger.info(ctx, "resendVerification", "Email verification token resent", {
+      userId: user.id,
+      email,
+      verificationToken,
+      verifyUrl,
+    });
+
+    void addEmailJob({
       to: email,
       subject: "Verify Your Email - Egi Media",
       html: emailHtml,
-    });
-
-    logger.info(ctx, "resendVerification", "Email verification token resent successfully", {
-      userId: user.id,
-      email,
+    }).catch((emailError) => {
+      logger.error(ctx, "resendVerification", "Failed to send verification email", emailError);
     });
 
     return wrapper.data({ message: "Verification email resent successfully" });
