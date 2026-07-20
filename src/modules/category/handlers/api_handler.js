@@ -13,7 +13,10 @@ const listCategories = async (req, res) => {
 };
 
 const getCategory = async (req, res) => {
-  const payload = validator.isValidPayload(req.params, queryModel.categoryIdParamType);
+  const payload = validator.isValidPayload(
+    { id: req.params.id, lang: req.query.lang },
+    queryModel.categoryIdParamType
+  );
   if (payload.err) return sendResponse(payload, res);
   return sendResponse(await queryHandler.getCategory(payload.data), res);
 };
