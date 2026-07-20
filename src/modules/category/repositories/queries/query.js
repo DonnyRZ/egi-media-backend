@@ -1,5 +1,12 @@
 const collection = "categories";
 
+const SELECT_COLUMNS = `
+  id, name, slug, description,
+  name_en, slug_en, description_en,
+  name_uz, slug_uz, description_uz,
+  created_at, updated_at
+`;
+
 class CategoryQuery {
   constructor(db) {
     this.db = db;
@@ -9,16 +16,26 @@ class CategoryQuery {
     const offset = (page - 1) * limit;
     const searchValue = search ? `%${search}%` : null;
     const rowsQuery = `
-      SELECT id, name, slug, description, created_at, updated_at
+      SELECT ${SELECT_COLUMNS}
       FROM ${collection}
-      WHERE ($1::text IS NULL OR name ILIKE $1 OR slug ILIKE $1)
+      WHERE (
+        $1::text IS NULL
+        OR name ILIKE $1 OR slug ILIKE $1 OR description ILIKE $1
+        OR name_en ILIKE $1 OR slug_en ILIKE $1 OR description_en ILIKE $1
+        OR name_uz ILIKE $1 OR slug_uz ILIKE $1 OR description_uz ILIKE $1
+      )
       ORDER BY name ASC, id ASC
       LIMIT $2 OFFSET $3;
     `;
     const countQuery = `
       SELECT COUNT(*)::int AS total
       FROM ${collection}
-      WHERE ($1::text IS NULL OR name ILIKE $1 OR slug ILIKE $1);
+      WHERE (
+        $1::text IS NULL
+        OR name ILIKE $1 OR slug ILIKE $1 OR description ILIKE $1
+        OR name_en ILIKE $1 OR slug_en ILIKE $1 OR description_en ILIKE $1
+        OR name_uz ILIKE $1 OR slug_uz ILIKE $1 OR description_uz ILIKE $1
+      );
     `;
 
     const [rows, count] = await Promise.all([
@@ -31,14 +48,17 @@ class CategoryQuery {
 
   async findOneById(id) {
     return this.db.executeQuery(
-      `SELECT id, name, slug, description, created_at, updated_at FROM ${collection} WHERE id = $1 LIMIT 1;`,
+      `SELECT ${SELECT_COLUMNS} FROM ${collection} WHERE id = $1 LIMIT 1;`,
       [id]
     );
   }
 
   async findOneBySlug(slug) {
     return this.db.executeQuery(
-      `SELECT id, name, slug, description, created_at, updated_at FROM ${collection} WHERE slug = $1 LIMIT 1;`,
+      `SELECT ${SELECT_COLUMNS}
+       FROM ${collection}
+       WHERE slug = $1 OR slug_en = $1 OR slug_uz = $1
+       LIMIT 1;`,
       [slug]
     );
   }

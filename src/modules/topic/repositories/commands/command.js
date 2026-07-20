@@ -1,26 +1,94 @@
 const collection = "topics";
 
+const TRANSLATION_COLUMNS = [
+  "name_en",
+  "slug_en",
+  "description_en",
+  "name_uz",
+  "slug_uz",
+  "description_uz",
+];
+
+const RETURNING_COLUMNS = `
+  id, name, slug, description,
+  name_en, slug_en, description_en,
+  name_uz, slug_uz, description_uz,
+  created_at, updated_at
+`;
+
 class TopicCommand {
   constructor(db) {
     this.db = db;
   }
 
-  async insertOne({ id, name, slug, description, created_at, updated_at }) {
+  async insertOne({
+    id,
+    name,
+    slug,
+    description,
+    created_at,
+    updated_at,
+    name_en,
+    slug_en,
+    description_en,
+    name_uz,
+    slug_uz,
+    description_uz,
+  }) {
     return this.db.executeQuery(
-      `INSERT INTO ${collection} (id, name, slug, description, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, slug, description, created_at, updated_at;`,
-      [id, name, slug, description, created_at, updated_at]
+      `INSERT INTO ${collection} (
+         id, name, slug, description, created_at, updated_at,
+         name_en, slug_en, description_en,
+         name_uz, slug_uz, description_uz
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING ${RETURNING_COLUMNS};`,
+      [
+        id,
+        name,
+        slug,
+        description,
+        created_at,
+        updated_at,
+        name_en ?? null,
+        slug_en ?? null,
+        description_en ?? null,
+        name_uz ?? null,
+        slug_uz ?? null,
+        description_uz ?? null,
+      ]
     );
   }
 
-  async updateOne({ id, name, slug, description, updated_at }) {
+  async updateOne({
+    id,
+    name,
+    slug,
+    description,
+    updated_at,
+    translationValues,
+    updatedTranslationFields,
+  }) {
+    const setClauses = ["name = $1", "slug = $2", "description = $3", "updated_at = $4"];
+    const values = [name, slug, description, updated_at];
+    let idx = 5;
+
+    for (const col of TRANSLATION_COLUMNS) {
+      if (updatedTranslationFields.includes(col)) {
+        setClauses.push(`${col} = $${idx}`);
+        values.push(translationValues?.[col] ?? null);
+        idx++;
+      }
+    }
+
+    values.push(id);
+
     return this.db.executeQuery(
       `UPDATE ${collection}
-       SET name = $1, slug = $2, description = $3, updated_at = $4
-       WHERE id = $5
-       RETURNING id, name, slug, description, created_at, updated_at;`,
-      [name, slug, description, updated_at, id]
+       SET ${setClauses.join(", ")}
+       WHERE id = $${idx}
+       RETURNING ${RETURNING_COLUMNS};`,
+      values
     );
   }
 
@@ -31,7 +99,7 @@ class TopicCommand {
        )
        DELETE FROM ${collection}
        WHERE id = $1
-       RETURNING id, name, slug, description, created_at, updated_at;`,
+       RETURNING ${RETURNING_COLUMNS};`,
       [id]
     );
   }

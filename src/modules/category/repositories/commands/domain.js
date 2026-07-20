@@ -5,6 +5,31 @@ const wrapper = require("../../../../helpers/utils/wrapper");
 const { BadRequestError, ConflictError, InternalServerError, NotFoundError } = require("../../../../helpers/errors");
 const { toSlug } = require("../../../../helpers/utils/slug");
 
+const TRANSLATION_LOCALES = ["en", "uz"];
+
+const buildTranslationValues = (translations, { patch = false } = {}) => {
+  const translationValues = {};
+  const updatedTranslationFields = [];
+
+  for (const loc of TRANSLATION_LOCALES) {
+    const entry = translations?.[loc];
+    if (!entry) continue;
+
+    if (!patch || entry.name !== undefined) {
+      const slug = toSlug(entry.name || "");
+      translationValues[`name_${loc}`] = entry.name ?? null;
+      translationValues[`slug_${loc}`] = slug || null;
+      updatedTranslationFields.push(`name_${loc}`, `slug_${loc}`);
+    }
+    if (!patch || entry.description !== undefined) {
+      translationValues[`description_${loc}`] = entry.description ?? null;
+      updatedTranslationFields.push(`description_${loc}`);
+    }
+  }
+
+  return { translationValues, updatedTranslationFields };
+};
+
 class CategoryCommandDomain {
   constructor(db) {
     this.command = new Command(db);
@@ -25,6 +50,15 @@ class CategoryCommandDomain {
       return wrapper.error(new ConflictError("Category name already exists"));
     }
 
+    const { translationValues } = buildTranslationValues(payload.translations);
+    for (const loc of TRANSLATION_LOCALES) {
+      if (payload.translations?.[loc]?.name && !translationValues[`slug_${loc}`]) {
+        return wrapper.error(
+          new BadRequestError(`Category ${loc} name must contain letters or numbers`)
+        );
+      }
+    }
+
     const now = new Date();
     const result = await this.command.insertOne({
       id: randomUUID(),
@@ -33,6 +67,12 @@ class CategoryCommandDomain {
       description: payload.description || null,
       created_at: now,
       updated_at: now,
+      name_en: translationValues.name_en ?? null,
+      slug_en: translationValues.slug_en ?? null,
+      description_en: translationValues.description_en ?? null,
+      name_uz: translationValues.name_uz ?? null,
+      slug_uz: translationValues.slug_uz ?? null,
+      description_uz: translationValues.description_uz ?? null,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to create category"));
@@ -61,12 +101,29 @@ class CategoryCommandDomain {
       return wrapper.error(new ConflictError("Category name already exists"));
     }
 
+    const { translationValues, updatedTranslationFields } = buildTranslationValues(
+      payload.translations,
+      { patch: true }
+    );
+    for (const loc of TRANSLATION_LOCALES) {
+      if (
+        payload.translations?.[loc]?.name !== undefined &&
+        !translationValues[`slug_${loc}`]
+      ) {
+        return wrapper.error(
+          new BadRequestError(`Category ${loc} name must contain letters or numbers`)
+        );
+      }
+    }
+
     const result = await this.command.updateOne({
       id: payload.id,
       name: payload.name,
       slug,
       description: payload.description || null,
       updated_at: new Date(),
+      translationValues,
+      updatedTranslationFields,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to update category"));

@@ -13,7 +13,10 @@ const listTopics = async (req, res) => {
 };
 
 const getTopic = async (req, res) => {
-  const payload = validator.isValidPayload(req.params, queryModel.topicIdParamType);
+  const payload = validator.isValidPayload(
+    { id: req.params.id, lang: req.query.lang },
+    queryModel.topicIdParamType
+  );
   if (payload.err) return sendResponse(payload, res);
   return sendResponse(await queryHandler.getTopic(payload.data), res);
 };
