@@ -64,7 +64,7 @@ const renderVerificationResultPage = (isSuccess, message) => {
   const iconSvg = isSuccess
     ? `<svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`
     : `<svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>`;
-  const frontendUrl = config.get("/frontendUrl") || "http://localhost:5173";
+  const frontendUrl = config.get("/frontendUrl") || "http://localhost:3000";
 
   return `
 <!DOCTYPE html>
@@ -167,7 +167,7 @@ const renderVerificationResultPage = (isSuccess, message) => {
     </div>
     <h1>${title}</h1>
     <p>${message}</p>
-    <a href="${frontendUrl}/login" class="btn">Continue to Login</a>
+    <a href="${frontendUrl.replace(/\/$/, "")}/id/login" class="btn">Continue to Login</a>
   </div>
 </body>
 </html>
@@ -260,11 +260,29 @@ const googleCallback = async (req, res) => {
     origin: req.user?.origin,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.googleLoginParamType);
+  const frontendUrl = (config.get("/frontendUrl") || "http://localhost:3000").replace(/\/$/, "");
+  const rawOrigin = (payload.origin || `${frontendUrl}/id`).replace(/\/$/, "");
+  // Ensure locale-prefixed origin when FE_URL alone is provided.
+  const origin = /\/(id|en|uz)$/i.test(rawOrigin) ? rawOrigin : `${rawOrigin}/id`;
+
   if (validatePayload.err) {
-    return sendResponse(validatePayload, res);
+    return res.redirect(`${origin}/login?error=google`);
   }
+
   const result = await commandHandler.googleLogin(validatePayload.data);
-  return sendResponse(result, res);
+  if (result.err) {
+    const message = encodeURIComponent(result.err.message || "Google login failed");
+    return res.redirect(`${origin}/login?error=${message}`);
+  }
+
+  const { access_token, refresh_token, expires_in } = result.data;
+  const params = new URLSearchParams({
+    access_token,
+    refresh_token,
+    expires_in: String(expires_in ?? ""),
+  });
+
+  return res.redirect(`${origin}/auth/google/callback?${params.toString()}`);
 };
 
 // ─── Get Me ────────────────────────────────────────────────────────────────────
