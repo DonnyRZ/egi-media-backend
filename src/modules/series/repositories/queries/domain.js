@@ -56,6 +56,7 @@ class SeriesQueryDomain {
       name: pickLocalized(row, "name", locale),
       slug: pickLocalized(row, "slug", locale),
       description: pickLocalized(row, "description", locale) || null,
+      image: row.image || null,
       created_at: row.created_at,
     };
   }
@@ -89,6 +90,8 @@ class SeriesQueryDomain {
       name: pickLocalized(row, "name", locale),
       slug: pickLocalized(row, "slug", locale),
       description: pickLocalized(row, "description", locale) || null,
+      // Shared across locales — not part of translations.
+      image: row.image || null,
       translations,
       created_at: row.created_at,
       articles: (articles || []).map(toArticleListItem),

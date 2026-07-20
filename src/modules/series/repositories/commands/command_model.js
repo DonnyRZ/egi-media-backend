@@ -18,6 +18,8 @@ const updateTranslationEntry = joi
 const seriesPayload = {
   name: joi.string().trim().min(1).max(150).required(),
   description: joi.string().trim().allow("", null).optional(),
+  // Shared across locales — one image for id/en/uz.
+  image: joi.string().uri().optional().allow(null, ""),
 };
 
 const createSeriesParamType = joi.object({

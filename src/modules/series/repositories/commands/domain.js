@@ -72,6 +72,7 @@ class SeriesCommandDomain {
       name: payload.name,
       slug,
       description: payload.description || null,
+      image: payload.image || null,
       author_id: payload.author_id,
       created_at: new Date(),
       name_en: translationValues.name_en ?? null,
@@ -132,6 +133,7 @@ class SeriesCommandDomain {
       name: payload.name,
       slug,
       description: payload.description || null,
+      image: payload.image || null,
       translationValues,
       updatedTranslationFields,
     });
