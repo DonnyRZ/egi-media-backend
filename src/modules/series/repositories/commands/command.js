@@ -10,7 +10,7 @@ const TRANSLATION_COLUMNS = [
 ];
 
 const RETURNING_COLUMNS = `
-  id, name, slug, description,
+  id, name, slug, description, image,
   name_en, slug_en, description_en,
   name_uz, slug_uz, description_uz,
   created_at
@@ -26,6 +26,7 @@ class SeriesCommand {
     name,
     slug,
     description,
+    image,
     author_id,
     created_at,
     name_en,
@@ -37,17 +38,18 @@ class SeriesCommand {
   }) {
     return this.db.executeQuery(
       `INSERT INTO ${collection} (
-         id, name, slug, description, author_id, created_at,
+         id, name, slug, description, image, author_id, created_at,
          name_en, slug_en, description_en,
          name_uz, slug_uz, description_uz
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING ${RETURNING_COLUMNS};`,
       [
         id,
         name,
         slug,
         description,
+        image ?? null,
         author_id,
         created_at,
         name_en ?? null,
@@ -65,12 +67,13 @@ class SeriesCommand {
     name,
     slug,
     description,
+    image,
     translationValues,
     updatedTranslationFields,
   }) {
-    const setClauses = ["name = $1", "slug = $2", "description = $3"];
-    const values = [name, slug, description];
-    let idx = 4;
+    const setClauses = ["name = $1", "slug = $2", "description = $3", "image = $4"];
+    const values = [name, slug, description, image ?? null];
+    let idx = 5;
 
     for (const col of TRANSLATION_COLUMNS) {
       if (updatedTranslationFields.includes(col)) {

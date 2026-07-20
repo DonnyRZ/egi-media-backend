@@ -1,7 +1,7 @@
 const collection = "series";
 
 const SELECT_COLUMNS = `
-  id, name, slug, description, author_id, created_at,
+  id, name, slug, description, image, author_id, created_at,
   name_en, slug_en, description_en,
   name_uz, slug_uz, description_uz
 `;
@@ -16,7 +16,7 @@ class SeriesQuery {
     const searchValue = search ? `%${search}%` : null;
     const rowsQuery = `
       SELECT
-        id, name, slug, description, created_at,
+        id, name, slug, description, image, created_at,
         name_en, slug_en, description_en,
         name_uz, slug_uz, description_uz
       FROM ${collection}

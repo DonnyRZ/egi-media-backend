@@ -156,6 +156,7 @@ class ArticleQueryDomain {
             name: row.series_name,
             slug: row.series_slug,
             description: row.series_description || null,
+            image: row.series_image || null,
             created_at: row.series_created_at,
           }
         : null,

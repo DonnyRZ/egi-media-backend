@@ -265,6 +265,7 @@ class Query {
           s.name AS series_name,
           s.slug AS series_slug,
           s.description AS series_description,
+          s.image AS series_image,
           s.created_at AS series_created_at,
           (SELECT COUNT(*)::int FROM article_views av WHERE av.article_id = a.id) AS view_count,
           (SELECT COUNT(*)::int FROM article_shares ash WHERE ash.article_id = a.id) AS share_count
@@ -330,6 +331,7 @@ class Query {
           s.name AS series_name,
           s.slug AS series_slug,
           s.description AS series_description,
+          s.image AS series_image,
           s.created_at AS series_created_at,
           (SELECT COUNT(*)::int FROM article_views av WHERE av.article_id = a.id) AS view_count,
           (SELECT COUNT(*)::int FROM article_shares ash WHERE ash.article_id = a.id) AS share_count
