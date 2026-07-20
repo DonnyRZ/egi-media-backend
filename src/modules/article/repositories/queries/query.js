@@ -137,7 +137,9 @@ class Query {
           u.id AS author_id,
           u.full_name AS author_full_name,
           c.id AS category_id,
-          c.name AS category_name
+          c.name AS category_name,
+          c.name_en AS category_name_en,
+          c.name_uz AS category_name_uz
         FROM articles a
         INNER JOIN users u ON u.id = a.author_id
         LEFT JOIN categories c ON c.id = a.category_id
@@ -257,8 +259,14 @@ class Query {
           u.role AS author_role,
           c.id AS cat_id,
           c.name AS cat_name,
+          c.name_en AS cat_name_en,
+          c.name_uz AS cat_name_uz,
           c.slug AS cat_slug,
+          c.slug_en AS cat_slug_en,
+          c.slug_uz AS cat_slug_uz,
           c.description AS cat_description,
+          c.description_en AS cat_description_en,
+          c.description_uz AS cat_description_uz,
           c.created_at AS cat_created_at,
           c.updated_at AS cat_updated_at,
           s.id AS series_id,
@@ -323,8 +331,14 @@ class Query {
           u.role AS author_role,
           c.id AS cat_id,
           c.name AS cat_name,
+          c.name_en AS cat_name_en,
+          c.name_uz AS cat_name_uz,
           c.slug AS cat_slug,
+          c.slug_en AS cat_slug_en,
+          c.slug_uz AS cat_slug_uz,
           c.description AS cat_description,
+          c.description_en AS cat_description_en,
+          c.description_uz AS cat_description_uz,
           c.created_at AS cat_created_at,
           c.updated_at AS cat_updated_at,
           s.id AS series_id,
@@ -395,8 +409,14 @@ class Query {
         SELECT
           t.id,
           t.name,
+          t.name_en,
+          t.name_uz,
           t.slug,
+          t.slug_en,
+          t.slug_uz,
           t.description,
+          t.description_en,
+          t.description_uz,
           t.created_at,
           t.updated_at
         FROM article_topics at2
@@ -469,7 +489,9 @@ class Query {
           u.id AS author_id,
           u.full_name AS author_full_name,
           c.id AS category_id,
-          c.name AS category_name
+          c.name AS category_name,
+          c.name_en AS category_name_en,
+          c.name_uz AS category_name_uz
         FROM articles a
         INNER JOIN users u ON u.id = a.author_id
         LEFT JOIN categories c ON c.id = a.category_id
@@ -542,6 +564,8 @@ class Query {
           u.full_name AS author_full_name,
           c.id AS category_id,
           c.name AS category_name,
+          c.name_en AS category_name_en,
+          c.name_uz AS category_name_uz,
           sa.created_at AS saved_at
         FROM saved_articles sa
         INNER JOIN articles a ON a.id = sa.article_id

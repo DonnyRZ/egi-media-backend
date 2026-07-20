@@ -53,7 +53,19 @@ class ArticleQueryDomain {
         full_name: row.author_full_name,
       },
       category: row.category_id
-        ? { id: row.category_id, name: row.category_name }
+        ? {
+            id: row.category_id,
+            // Follow UI locale (requested), not article content locale.
+            name: pickLocalized(
+              {
+                name: row.category_name,
+                name_en: row.category_name_en,
+                name_uz: row.category_name_uz,
+              },
+              "name",
+              requestedLocale,
+            ),
+          }
         : null,
     };
   }
@@ -143,9 +155,34 @@ class ArticleQueryDomain {
       category: row.cat_id
         ? {
             id: row.cat_id,
-            name: row.cat_name,
-            slug: row.cat_slug,
-            description: row.cat_description || null,
+            name: pickLocalized(
+              {
+                name: row.cat_name,
+                name_en: row.cat_name_en,
+                name_uz: row.cat_name_uz,
+              },
+              "name",
+              requestedLocale,
+            ),
+            slug: pickLocalized(
+              {
+                slug: row.cat_slug,
+                slug_en: row.cat_slug_en,
+                slug_uz: row.cat_slug_uz,
+              },
+              "slug",
+              requestedLocale,
+            ),
+            description:
+              pickLocalized(
+                {
+                  description: row.cat_description,
+                  description_en: row.cat_description_en,
+                  description_uz: row.cat_description_uz,
+                },
+                "description",
+                requestedLocale,
+              ) || null,
             created_at: row.cat_created_at,
             updated_at: row.cat_updated_at,
           }
@@ -160,7 +197,15 @@ class ArticleQueryDomain {
             created_at: row.series_created_at,
           }
         : null,
-      topics: topics || [],
+      topics: (topics || []).map((topic) => ({
+        id: topic.id,
+        name: pickLocalized(topic, "name", requestedLocale),
+        slug: pickLocalized(topic, "slug", requestedLocale),
+        description:
+          pickLocalized(topic, "description", requestedLocale) || null,
+        created_at: topic.created_at,
+        updated_at: topic.updated_at,
+      })),
       tags: tags || [],
     };
   }
