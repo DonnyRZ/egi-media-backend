@@ -13,7 +13,10 @@ const listSeries = async (req, res) => {
 };
 
 const getSeries = async (req, res) => {
-  const payload = validator.isValidPayload(req.params, queryModel.seriesIdParamType);
+  const payload = validator.isValidPayload(
+    { id: req.params.id, lang: req.query.lang },
+    queryModel.seriesIdParamType
+  );
   if (payload.err) return sendResponse(payload, res);
   return sendResponse(await queryHandler.getSeries(payload.data), res);
 };
