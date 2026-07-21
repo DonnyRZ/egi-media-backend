@@ -111,6 +111,7 @@ const addAuthor = async (req, res) => {
     email: req.body.email,
     password: req.body.password,
     full_name: req.body.full_name,
+    role: req.body.role,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.addAuthorParamType);
   if (validatePayload.err) {

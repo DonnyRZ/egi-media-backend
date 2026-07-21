@@ -22,6 +22,7 @@ const addAuthorParamType = joi.object({
   email: joi.string().email().required(),
   password: joi.string().min(8).required(),
   full_name: joi.string().max(150).required(),
+  role: joi.string().valid("author", "superadmin").default("author"),
 });
 
 module.exports = {
