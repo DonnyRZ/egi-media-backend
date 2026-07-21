@@ -16,9 +16,21 @@ const createTag = async (req, res) => {
   if (payload.err) return sendResponse(payload, res);
   return sendResponse(await commandHandler.createTag(payload.data), res, SUCCESS.CREATED);
 };
+const updateTag = async (req, res) => {
+  const payload = validator.isValidPayload(
+    { id: req.params.id, name: req.body.name },
+    commandModel.updateTagParamType
+  );
+  if (payload.err) {
+    return sendResponse(payload, res);
+  }
+  const result = await commandHandler.updateTag(payload.data);
+  return sendResponse(result, res);
+};
+
 const deleteTag = async (req, res) => {
   const payload = validator.isValidPayload(req.params, commandModel.deleteTagParamType);
   if (payload.err) return sendResponse(payload, res);
   return sendResponse(await commandHandler.deleteTag(payload.data), res);
 };
-module.exports = { listTags, createTag, deleteTag };
+module.exports = { listTags, createTag, updateTag, deleteTag };
