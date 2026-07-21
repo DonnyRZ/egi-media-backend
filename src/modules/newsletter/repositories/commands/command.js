@@ -1,24 +1,88 @@
+const TRANSLATION_COLUMNS = [
+  "name_en",
+  "description_en",
+  "name_uz",
+  "description_uz",
+];
+
+const RETURNING_COLUMNS = `
+  id, name, description, frequency, is_active, created_at,
+  name_en, description_en, name_uz, description_uz
+`;
+
 class NewsletterCommand {
   constructor(db) {
     this.db = db;
   }
 
-  async insertOne({ id, name, description, frequency, is_active, created_at }) {
+  async insertOne({
+    id,
+    name,
+    description,
+    frequency,
+    is_active,
+    created_at,
+    name_en,
+    description_en,
+    name_uz,
+    description_uz,
+  }) {
     return this.db.executeQuery(
-      `INSERT INTO newsletters (id, name, description, frequency, is_active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, name, description, frequency, is_active, created_at;`,
-      [id, name, description, frequency, is_active, created_at]
+      `INSERT INTO newsletters (
+         id, name, description, frequency, is_active, created_at,
+         name_en, description_en, name_uz, description_uz
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING ${RETURNING_COLUMNS};`,
+      [
+        id,
+        name,
+        description,
+        frequency,
+        is_active,
+        created_at,
+        name_en ?? null,
+        description_en ?? null,
+        name_uz ?? null,
+        description_uz ?? null,
+      ]
     );
   }
 
-  async updateOne({ id, name, description, frequency, is_active }) {
+  async updateOne({
+    id,
+    name,
+    description,
+    frequency,
+    is_active,
+    translationValues,
+    updatedTranslationFields,
+  }) {
+    const setClauses = [
+      "name = $1",
+      "description = $2",
+      "frequency = $3",
+      "is_active = $4",
+    ];
+    const values = [name, description, frequency, is_active];
+    let idx = 5;
+
+    for (const col of TRANSLATION_COLUMNS) {
+      if (updatedTranslationFields.includes(col)) {
+        setClauses.push(`${col} = $${idx}`);
+        values.push(translationValues?.[col] ?? null);
+        idx++;
+      }
+    }
+
+    values.push(id);
+
     return this.db.executeQuery(
       `UPDATE newsletters
-       SET name = $1, description = $2, frequency = $3, is_active = $4
-       WHERE id = $5
-       RETURNING id, name, description, frequency, is_active, created_at;`,
-      [name, description, frequency, is_active, id]
+       SET ${setClauses.join(", ")}
+       WHERE id = $${idx}
+       RETURNING ${RETURNING_COLUMNS};`,
+      values
     );
   }
 
@@ -33,7 +97,7 @@ class NewsletterCommand {
         values: [id],
       },
       {
-        query: `DELETE FROM newsletters WHERE id = $1 RETURNING id, name, description, frequency, is_active, created_at;`,
+        query: `DELETE FROM newsletters WHERE id = $1 RETURNING ${RETURNING_COLUMNS};`,
         values: [id],
       },
     ];

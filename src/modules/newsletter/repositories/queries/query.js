@@ -1,3 +1,8 @@
+const SELECT_COLUMNS = `
+  id, name, description, frequency, is_active, created_at,
+  name_en, description_en, name_uz, description_uz
+`;
+
 class NewsletterQuery {
   constructor(db) {
     this.db = db;
@@ -6,7 +11,7 @@ class NewsletterQuery {
   async findMany({ page, limit }) {
     const offset = (page - 1) * limit;
     const rowsQuery = `
-      SELECT id, name, description, frequency, is_active, created_at
+      SELECT ${SELECT_COLUMNS}
       FROM newsletters
       WHERE is_active = true
       ORDER BY name ASC, id ASC
@@ -28,7 +33,7 @@ class NewsletterQuery {
 
   async findOneById(id) {
     return this.db.executeQuery(
-      `SELECT id, name, description, frequency, is_active, created_at
+      `SELECT ${SELECT_COLUMNS}
        FROM newsletters
        WHERE id = $1
        LIMIT 1;`,
@@ -38,7 +43,7 @@ class NewsletterQuery {
 
   async findOneByName(name) {
     return this.db.executeQuery(
-      `SELECT id, name, description, frequency, is_active, created_at
+      `SELECT ${SELECT_COLUMNS}
        FROM newsletters
        WHERE name = $1
        LIMIT 1;`,
