@@ -10,6 +10,29 @@ const {
   NotFoundError,
 } = require("../../../../helpers/errors");
 
+const TRANSLATION_LOCALES = ["en", "uz"];
+
+const buildTranslationValues = (translations, { patch = false } = {}) => {
+  const translationValues = {};
+  const updatedTranslationFields = [];
+
+  for (const loc of TRANSLATION_LOCALES) {
+    const entry = translations?.[loc];
+    if (!entry) continue;
+
+    if (!patch || entry.name !== undefined) {
+      translationValues[`name_${loc}`] = entry.name ?? null;
+      updatedTranslationFields.push(`name_${loc}`);
+    }
+    if (!patch || entry.description !== undefined) {
+      translationValues[`description_${loc}`] = entry.description ?? null;
+      updatedTranslationFields.push(`description_${loc}`);
+    }
+  }
+
+  return { translationValues, updatedTranslationFields };
+};
+
 class NewsletterCommandDomain {
   constructor(db) {
     this.command = new Command(db);
@@ -25,6 +48,8 @@ class NewsletterCommandDomain {
       return wrapper.error(new ConflictError("Newsletter name already exists"));
     }
 
+    const { translationValues } = buildTranslationValues(payload.translations);
+
     const result = await this.command.insertOne({
       id: randomUUID(),
       name: payload.name,
@@ -32,6 +57,10 @@ class NewsletterCommandDomain {
       frequency: payload.frequency,
       is_active: payload.is_active !== undefined ? payload.is_active : true,
       created_at: new Date(),
+      name_en: translationValues.name_en ?? null,
+      description_en: translationValues.description_en ?? null,
+      name_uz: translationValues.name_uz ?? null,
+      description_uz: translationValues.description_uz ?? null,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to create newsletter"));
@@ -56,12 +85,19 @@ class NewsletterCommandDomain {
       return wrapper.error(new ConflictError("Newsletter name already exists"));
     }
 
+    const { translationValues, updatedTranslationFields } = buildTranslationValues(
+      payload.translations,
+      { patch: true }
+    );
+
     const result = await this.command.updateOne({
       id: payload.id,
       name: payload.name,
       description: payload.description || null,
       frequency: payload.frequency,
       is_active: payload.is_active,
+      translationValues,
+      updatedTranslationFields,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to update newsletter"));
