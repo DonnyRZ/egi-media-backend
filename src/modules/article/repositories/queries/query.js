@@ -486,6 +486,7 @@ class Query {
           a.status,
           a.published_at,
           a.created_at,
+          a.updated_at,
           u.id AS author_id,
           u.full_name AS author_full_name,
           c.id AS category_id,
@@ -506,6 +507,136 @@ class Query {
       return wrapper.data(result.rows);
     } catch (error) {
       logger.error(ctx, "findMyArticles", "Error querying my articles", error);
+      return wrapper.error(error);
+    }
+  }
+
+  // ─── List Manage Articles (semua author, semua status) ────────────────────────
+  // Dipakai CMS editorial: superadmin & author bisa melihat seluruh artikel.
+  // Kontrol edit/hapus/ubah-status tetap divalidasi ownership di command domain.
+  async findManageArticles({ page, limit, search, status, author_id, category_id }) {
+    try {
+      const offset = (page - 1) * limit;
+      const conditions = ["a.deleted_at IS NULL"];
+      const values = [];
+      let idx = 1;
+
+      if (search) {
+        conditions.push(`(
+          a.title ILIKE $${idx} OR a.summary ILIKE $${idx}
+          OR a.title_en ILIKE $${idx} OR a.title_uz ILIKE $${idx}
+        )`);
+        values.push(`%${search}%`);
+        idx++;
+      }
+
+      if (status) {
+        conditions.push(`a.status = $${idx}`);
+        values.push(status);
+        idx++;
+      }
+
+      if (author_id) {
+        conditions.push(`a.author_id = $${idx}`);
+        values.push(author_id);
+        idx++;
+      }
+
+      if (category_id) {
+        conditions.push(`a.category_id = $${idx}`);
+        values.push(category_id);
+        idx++;
+      }
+
+      const whereClause = `WHERE ${conditions.join(" AND ")}`;
+
+      const query = `
+        SELECT
+          a.id,
+          a.title,
+          a.slug,
+          a.summary,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
+          a.featured_image,
+          a.status,
+          a.published_at,
+          a.created_at,
+          a.updated_at,
+          u.id AS author_id,
+          u.full_name AS author_full_name,
+          c.id AS category_id,
+          c.name AS category_name,
+          c.name_en AS category_name_en,
+          c.name_uz AS category_name_uz
+        FROM articles a
+        INNER JOIN users u ON u.id = a.author_id
+        LEFT JOIN categories c ON c.id = a.category_id
+        ${whereClause}
+        ORDER BY a.updated_at DESC NULLS LAST, a.created_at DESC
+        LIMIT $${idx} OFFSET $${idx + 1}
+      `;
+
+      values.push(limit, offset);
+
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(result.rows);
+    } catch (error) {
+      logger.error(ctx, "findManageArticles", "Error querying manage articles", error);
+      return wrapper.error(error);
+    }
+  }
+
+  // ─── Count Manage Articles ────────────────────────────────────────────────────
+  async countManageArticles({ search, status, author_id, category_id }) {
+    try {
+      const conditions = ["a.deleted_at IS NULL"];
+      const values = [];
+      let idx = 1;
+
+      if (search) {
+        conditions.push(`(
+          a.title ILIKE $${idx} OR a.summary ILIKE $${idx}
+          OR a.title_en ILIKE $${idx} OR a.title_uz ILIKE $${idx}
+        )`);
+        values.push(`%${search}%`);
+        idx++;
+      }
+
+      if (status) {
+        conditions.push(`a.status = $${idx}`);
+        values.push(status);
+        idx++;
+      }
+
+      if (author_id) {
+        conditions.push(`a.author_id = $${idx}`);
+        values.push(author_id);
+        idx++;
+      }
+
+      if (category_id) {
+        conditions.push(`a.category_id = $${idx}`);
+        values.push(category_id);
+        idx++;
+      }
+
+      const whereClause = `WHERE ${conditions.join(" AND ")}`;
+
+      const query = `
+        SELECT COUNT(*)::int AS total
+        FROM articles a
+        ${whereClause}
+      `;
+
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(result.rows[0]?.total || 0);
+    } catch (error) {
+      logger.error(ctx, "countManageArticles", "Error counting manage articles", error);
       return wrapper.error(error);
     }
   }

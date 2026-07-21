@@ -9,6 +9,7 @@ const getArticleById = async (payload) => domain.getArticleById(payload);
 const getArticleBySlug = async (payload) => domain.getArticleBySlug(payload);
 const getMyArticles = async (payload) => domain.getMyArticles(payload);
 const getSavedArticles = async (payload) => domain.getSavedArticles(payload);
+const getManageArticles = async (payload) => domain.getManageArticles(payload);
 
 module.exports = {
   getArticles,
@@ -16,4 +17,5 @@ module.exports = {
   getArticleBySlug,
   getMyArticles,
   getSavedArticles,
+  getManageArticles,
 };

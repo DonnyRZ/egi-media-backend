@@ -48,6 +48,7 @@ class ArticleQueryDomain {
       status: row.status,
       published_at: row.published_at || null,
       created_at: row.created_at,
+      updated_at: row.updated_at || null,
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
@@ -291,6 +292,39 @@ class ArticleQueryDomain {
     const items = articlesResult.data.map((row) => this.mapListItem(row, requestedLocale));
 
     logger.info(ctx, "getMyArticles", "Fetched my articles successfully", { author_id, total });
+
+    return wrapper.data({
+      items,
+      meta: { total, page, limit, total_pages },
+    });
+  }
+
+  // ─── Get Manage Articles (editorial: semua author & status) ─────────────────
+  async getManageArticles(payload) {
+    const { page, limit, search, status, author_id, category_id, lang } = payload;
+    const requestedLocale = lang || DEFAULT_LOCALE;
+
+    const [articlesResult, countResult] = await Promise.all([
+      this.query.findManageArticles({ page, limit, search, status, author_id, category_id }),
+      this.query.countManageArticles({ search, status, author_id, category_id }),
+    ]);
+
+    if (articlesResult.err) {
+      logger.error(ctx, "getManageArticles", "Failed to fetch manage articles", articlesResult.err);
+      return wrapper.error(articlesResult.err);
+    }
+
+    if (countResult.err) {
+      logger.error(ctx, "getManageArticles", "Failed to count manage articles", countResult.err);
+      return wrapper.error(countResult.err);
+    }
+
+    const total = countResult.data;
+    const total_pages = Math.ceil(total / limit);
+
+    const items = articlesResult.data.map((row) => this.mapListItem(row, requestedLocale));
+
+    logger.info(ctx, "getManageArticles", "Fetched manage articles successfully", { total });
 
     return wrapper.data({
       items,

@@ -13,6 +13,14 @@ module.exports = (server) => {
   server.get("/api/v1/articles/me", verifyToken, articleHandler.getMyArticles);
   server.get("/api/v1/articles/saved", verifyToken, articleHandler.getSavedArticles);
 
+  // Editorial CMS: seluruh artikel (semua author & status) untuk author/superadmin.
+  server.get(
+    "/api/v1/articles/manage",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.getManageArticles
+  );
+
   // Detail by ID
   server.get("/api/v1/articles/:id", articleHandler.getArticleById);
 

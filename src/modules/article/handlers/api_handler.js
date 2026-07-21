@@ -69,6 +69,26 @@ const getMyArticles = async (req, res) => {
   return sendResponse(result, res);
 };
 
+// ─── GET /api/v1/articles/manage ───────────────────────────────────────────────
+// Editorial CMS: list semua artikel (semua author & status) untuk author/superadmin.
+const getManageArticles = async (req, res) => {
+  const payload = {
+    page: req.query.page,
+    limit: req.query.limit,
+    search: req.query.search,
+    status: req.query.status,
+    author_id: req.query.author_id,
+    category_id: req.query.category_id,
+    lang: req.query.lang,
+  };
+  const validatePayload = validator.isValidPayload(payload, queryModel.getManageArticlesParamType);
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getManageArticles(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 // ─── GET /api/v1/articles/saved ───────────────────────────────────────────────
 const getSavedArticles = async (req, res) => {
   const payload = {
@@ -233,6 +253,7 @@ module.exports = {
   getArticles,
   createArticle,
   getMyArticles,
+  getManageArticles,
   getSavedArticles,
   getArticleById,
   getArticleBySlug,
