@@ -30,6 +30,9 @@ const config = {
     accS3User: process.env.R2_ACCESS_S3_USER,
     secS3User: process.env.R2_SECRET_S3_USER,
     bucketName: process.env.R2_BUCKET_NAME,
+    // Public base URL used to build the returned object URL (r2.dev domain or a
+    // custom domain bound to the bucket). No trailing slash.
+    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
   },
   redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
   mailConfig: {
