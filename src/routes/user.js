@@ -15,9 +15,15 @@ module.exports = (server) => {
   server.post("/api/v1/users/:id/follow", verifyToken, userHandler.followAuthor);
   server.delete("/api/v1/users/:id/follow", verifyToken, userHandler.unfollowAuthor);
 
+  // List semua user (read-only untuk author & superadmin; author melihat direktori tim)
+  server.get(
+    "/api/v1/users",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    userHandler.getUsers
+  );
+
   // ─── Superadmin-Only Routes ─────────────────────────────────────────────────
-  // List semua user (superadmin only)
-  server.get("/api/v1/users", verifyToken, verifyRoleName(["superadmin"]), userHandler.getUsers);
 
   // Update user (superadmin only)
   server.patch("/api/v1/users/:id", verifyToken, verifyRoleName(["superadmin"]), userHandler.updateUser);
