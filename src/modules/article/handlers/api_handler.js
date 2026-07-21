@@ -79,6 +79,9 @@ const getManageArticles = async (req, res) => {
     status: req.query.status,
     author_id: req.query.author_id,
     category_id: req.query.category_id,
+    topic_id: req.query.topic_id,
+    tag_id: req.query.tag_id,
+    series_id: req.query.series_id,
     lang: req.query.lang,
   };
   const validatePayload = validator.isValidPayload(payload, queryModel.getManageArticlesParamType);

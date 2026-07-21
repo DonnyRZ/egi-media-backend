@@ -514,7 +514,7 @@ class Query {
   // ─── List Manage Articles (semua author, semua status) ────────────────────────
   // Dipakai CMS editorial: superadmin & author bisa melihat seluruh artikel.
   // Kontrol edit/hapus/ubah-status tetap divalidasi ownership di command domain.
-  async findManageArticles({ page, limit, search, status, author_id, category_id }) {
+  async findManageArticles({ page, limit, search, status, author_id, category_id, topic_id, tag_id, series_id }) {
     try {
       const offset = (page - 1) * limit;
       const conditions = ["a.deleted_at IS NULL"];
@@ -545,6 +545,30 @@ class Query {
       if (category_id) {
         conditions.push(`a.category_id = $${idx}`);
         values.push(category_id);
+        idx++;
+      }
+
+      if (series_id) {
+        conditions.push(`a.series_id = $${idx}`);
+        values.push(series_id);
+        idx++;
+      }
+
+      if (topic_id) {
+        conditions.push(`EXISTS (
+          SELECT 1 FROM article_topics at2
+          WHERE at2.article_id = a.id AND at2.topic_id = $${idx}
+        )`);
+        values.push(topic_id);
+        idx++;
+      }
+
+      if (tag_id) {
+        conditions.push(`EXISTS (
+          SELECT 1 FROM article_tags atg
+          WHERE atg.article_id = a.id AND atg.tag_id = $${idx}
+        )`);
+        values.push(tag_id);
         idx++;
       }
 
@@ -592,7 +616,7 @@ class Query {
   }
 
   // ─── Count Manage Articles ────────────────────────────────────────────────────
-  async countManageArticles({ search, status, author_id, category_id }) {
+  async countManageArticles({ search, status, author_id, category_id, topic_id, tag_id, series_id }) {
     try {
       const conditions = ["a.deleted_at IS NULL"];
       const values = [];
@@ -622,6 +646,30 @@ class Query {
       if (category_id) {
         conditions.push(`a.category_id = $${idx}`);
         values.push(category_id);
+        idx++;
+      }
+
+      if (series_id) {
+        conditions.push(`a.series_id = $${idx}`);
+        values.push(series_id);
+        idx++;
+      }
+
+      if (topic_id) {
+        conditions.push(`EXISTS (
+          SELECT 1 FROM article_topics at2
+          WHERE at2.article_id = a.id AND at2.topic_id = $${idx}
+        )`);
+        values.push(topic_id);
+        idx++;
+      }
+
+      if (tag_id) {
+        conditions.push(`EXISTS (
+          SELECT 1 FROM article_tags atg
+          WHERE atg.article_id = a.id AND atg.tag_id = $${idx}
+        )`);
+        values.push(tag_id);
         idx++;
       }
 

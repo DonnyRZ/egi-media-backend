@@ -301,12 +301,13 @@ class ArticleQueryDomain {
 
   // ─── Get Manage Articles (editorial: semua author & status) ─────────────────
   async getManageArticles(payload) {
-    const { page, limit, search, status, author_id, category_id, lang } = payload;
+    const { page, limit, search, status, author_id, category_id, topic_id, tag_id, series_id, lang } = payload;
     const requestedLocale = lang || DEFAULT_LOCALE;
 
+    const filters = { search, status, author_id, category_id, topic_id, tag_id, series_id };
     const [articlesResult, countResult] = await Promise.all([
-      this.query.findManageArticles({ page, limit, search, status, author_id, category_id }),
-      this.query.countManageArticles({ search, status, author_id, category_id }),
+      this.query.findManageArticles({ page, limit, ...filters }),
+      this.query.countManageArticles(filters),
     ]);
 
     if (articlesResult.err) {

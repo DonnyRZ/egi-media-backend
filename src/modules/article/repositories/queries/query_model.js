@@ -62,6 +62,9 @@ const getManageArticlesParamType = joi.object({
     .allow("", null),
   author_id: joi.string().uuid().optional().allow("", null),
   category_id: joi.string().uuid().optional().allow("", null),
+  topic_id: joi.string().uuid().optional().allow("", null),
+  tag_id: joi.string().uuid().optional().allow("", null),
+  series_id: joi.string().uuid().optional().allow("", null),
   lang: localeParam,
 });
 
