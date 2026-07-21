@@ -745,6 +745,7 @@
       },
       "Newsletter": {
         "type": "object",
+        "description": "Indonesian (id) is stored in the base fields (name, description). English (en) and Uzbek (uz) live in the *_en and *_uz fields and are null until translated.",
         "properties": {
           "id": {
             "type": "string",
@@ -767,6 +768,24 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "name_en": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true
+          },
+          "description_en": {
+            "type": "string",
+            "nullable": true
+          },
+          "name_uz": {
+            "type": "string",
+            "maxLength": 150,
+            "nullable": true
+          },
+          "description_uz": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -1194,6 +1213,20 @@
           }
         }
       },
+      "NewsletterTranslation": {
+        "type": "object",
+        "description": "Optional per-locale translation. Provide 'name' to make the translation meaningful; 'description' is optional.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "CreateNewsletterRequest": {
         "type": "object",
         "required": [
@@ -1203,11 +1236,13 @@
         "properties": {
           "name": {
             "type": "string",
-            "maxLength": 150
+            "maxLength": 150,
+            "description": "Indonesian (id) name — the primary language."
           },
           "description": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Indonesian (id) description — the primary language."
           },
           "frequency": {
             "$ref": "#/components/schemas/NewsletterFrequency"
@@ -1215,6 +1250,18 @@
           "is_active": {
             "type": "boolean",
             "default": true
+          },
+          "translations": {
+            "type": "object",
+            "description": "Optional English (en) and Uzbek (uz) translations.",
+            "properties": {
+              "en": {
+                "$ref": "#/components/schemas/NewsletterTranslation"
+              },
+              "uz": {
+                "$ref": "#/components/schemas/NewsletterTranslation"
+              }
+            }
           }
         }
       },
