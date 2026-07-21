@@ -202,6 +202,15 @@ class ArticleCommandDomain {
       return wrapper.error(new ForbiddenError("You are not allowed to change this article's status"));
     }
 
+    // Author hanya boleh submit review atau kembali ke draft. Publish, schedule,
+    // dan archive adalah kewenangan superadmin.
+    const AUTHOR_ALLOWED_STATUS = ["review", "draft"];
+    if (actor_role !== "superadmin" && !AUTHOR_ALLOWED_STATUS.includes(status)) {
+      return wrapper.error(
+        new ForbiddenError("Only superadmin can publish, schedule, or archive articles")
+      );
+    }
+
     // Validasi status transition
     const allowedNext = ALLOWED_TRANSITIONS[article.status] || [];
     if (!allowedNext.includes(status)) {
