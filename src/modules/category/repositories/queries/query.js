@@ -16,7 +16,9 @@ class CategoryQuery {
     const offset = (page - 1) * limit;
     const searchValue = search ? `%${search}%` : null;
     const rowsQuery = `
-      SELECT ${SELECT_COLUMNS}
+      SELECT ${SELECT_COLUMNS},
+        (SELECT COUNT(*)::int FROM articles a
+         WHERE a.category_id = ${collection}.id AND a.deleted_at IS NULL) AS article_count
       FROM ${collection}
       WHERE (
         $1::text IS NULL

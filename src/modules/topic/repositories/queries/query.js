@@ -16,7 +16,10 @@ class TopicQuery {
     const offset = (page - 1) * limit;
     const searchValue = search ? `%${search}%` : null;
     const rowsQuery = `
-      SELECT ${SELECT_COLUMNS}
+      SELECT ${SELECT_COLUMNS},
+        (SELECT COUNT(*)::int FROM article_topics at2
+         JOIN articles a ON a.id = at2.article_id
+         WHERE at2.topic_id = ${collection}.id AND a.deleted_at IS NULL) AS article_count
       FROM ${collection}
       WHERE (
         $1::text IS NULL

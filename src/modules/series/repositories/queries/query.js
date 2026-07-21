@@ -18,7 +18,9 @@ class SeriesQuery {
       SELECT
         id, name, slug, description, image, created_at,
         name_en, slug_en, description_en,
-        name_uz, slug_uz, description_uz
+        name_uz, slug_uz, description_uz,
+        (SELECT COUNT(*)::int FROM articles a
+         WHERE a.series_id = ${collection}.id AND a.deleted_at IS NULL) AS article_count
       FROM ${collection}
       WHERE (
         $1::text IS NULL
