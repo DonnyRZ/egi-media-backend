@@ -1,5 +1,6 @@
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const { encrypt } = require("../../../../helpers/utils/crypto_helper");
 const ctx = "User-Command";
 
 class Command {
@@ -25,7 +26,9 @@ class Command {
 
       const values = [
         document.id,
-        document.email,
+        // Email is a sensitive field: store it encrypted so it matches the
+        // encrypted lookup performed on login (db.findOne encrypts the filter).
+        encrypt(document.email),
         document.password_hash,
         document.full_name,
         document.role,
