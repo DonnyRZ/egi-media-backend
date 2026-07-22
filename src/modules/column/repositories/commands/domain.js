@@ -382,11 +382,34 @@ class ColumnCommandDomain {
       return wrapper.error(new NotFoundError("Column not found"));
     }
 
-    const comment = commentExists.data;
-    const isCommentOwner = comment.user_id === actor_id;
-    const isColumnAuthor = columnExists.data.author_id === actor_id;
-    const isSuperadmin = actor_role === "superadmin";
-    if (!isSuperadmin && !isColumnAuthor && !isCommentOwner) {
+    const actorId = actor_id ? String(actor_id) : "";
+    const commentAuthorId = commentExists.data.user_id
+      ? String(commentExists.data.user_id)
+      : "";
+    const columnAuthorId = columnExists.data.author_id
+      ? String(columnExists.data.author_id)
+      : "";
+    const role = typeof actor_role === "string" ? actor_role.trim().toLowerCase() : "";
+
+    // Registered default role is visitor — they may comment, but never delete.
+    if (!role || role === "visitor") {
+      return wrapper.error(
+        new ForbiddenError("Visitors are not allowed to delete comments")
+      );
+    }
+
+    const isCommentOwner = Boolean(actorId) && actorId === commentAuthorId;
+    const isColumnAuthor = Boolean(actorId) && actorId === columnAuthorId;
+    const isSuperadmin = role === "superadmin";
+
+    if (!isCommentOwner && !isColumnAuthor && !isSuperadmin) {
+      logger.info(ctx, "deleteComment", "Delete denied", {
+        comment_id,
+        actor_id: actorId,
+        comment_author_id: commentAuthorId,
+        column_author_id: columnAuthorId,
+        actor_role: role,
+      });
       return wrapper.error(
         new ForbiddenError(
           "Only the comment owner, column author, or superadmin can delete this comment"
@@ -399,7 +422,10 @@ class ColumnCommandDomain {
       return wrapper.error(result.err);
     }
 
-    logger.info(ctx, "deleteComment", "Comment deleted", { comment_id });
+    logger.info(ctx, "deleteComment", "Comment deleted", {
+      comment_id,
+      by: isSuperadmin ? "superadmin" : isColumnAuthor ? "column_author" : "comment_owner",
+    });
     return wrapper.data(true);
   }
 }
