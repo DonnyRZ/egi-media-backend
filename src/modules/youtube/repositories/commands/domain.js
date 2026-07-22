@@ -41,6 +41,7 @@ class YoutubeCommandDomain {
       title: payload.title,
       description: payload.description || null,
       url: payload.url,
+      is_active: payload.is_active !== false,
       created_at: new Date(),
       title_en: translationValues.title_en ?? null,
       description_en: translationValues.description_en ?? null,
@@ -72,6 +73,7 @@ class YoutubeCommandDomain {
       title: payload.title,
       description: payload.description || null,
       url: payload.url,
+      is_active: payload.is_active !== false,
       translationValues,
       updatedTranslationFields,
     });

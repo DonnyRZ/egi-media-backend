@@ -333,6 +333,18 @@ class ArticleQueryDomain {
     });
   }
 
+  // ─── Dashboard article stats ────────────────────────────────────────────────
+  async getArticleStats(payload) {
+    const result = await this.query.countArticleStats({
+      author_id: payload.author_id || null,
+    });
+    if (result.err) {
+      logger.error(ctx, "getArticleStats", "Failed to count article stats", result.err);
+      return wrapper.error(result.err);
+    }
+    return wrapper.data(result.data);
+  }
+
   // ─── Get Saved Articles ─────────────────────────────────────────────────────
   async getSavedArticles(payload) {
     const { user_id, page, limit, lang } = payload;

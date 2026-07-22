@@ -21,6 +21,14 @@ module.exports = (server) => {
     articleHandler.getManageArticles
   );
 
+  // Editorial CMS dashboard stats (superadmin = all; author = own).
+  server.get(
+    "/api/v1/articles/stats",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.getArticleStats
+  );
+
   // Detail by ID
   server.get("/api/v1/articles/:id", articleHandler.getArticleById);
 

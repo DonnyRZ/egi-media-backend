@@ -69,6 +69,24 @@ const getMyArticles = async (req, res) => {
   return sendResponse(result, res);
 };
 
+// ─── GET /api/v1/articles/stats ────────────────────────────────────────────────
+// Editorial CMS dashboard: superadmin = newsroom-wide; author = own articles only.
+const getArticleStats = async (req, res) => {
+  const role = req.userMeta?.role;
+  const payload = {
+    author_id: role === "superadmin" ? null : req.userMeta?.id,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    queryModel.getArticleStatsParamType,
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getArticleStats(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 // ─── GET /api/v1/articles/manage ───────────────────────────────────────────────
 // Editorial CMS: list semua artikel (semua author & status) untuk author/superadmin.
 const getManageArticles = async (req, res) => {
@@ -256,6 +274,7 @@ module.exports = {
   getArticles,
   createArticle,
   getMyArticles,
+  getArticleStats,
   getManageArticles,
   getSavedArticles,
   getArticleById,

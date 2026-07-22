@@ -19,6 +19,7 @@ const videoPayload = {
   title: joi.string().trim().max(255).required(),
   description: joi.string().trim().allow("", null).optional(),
   url: joi.string().uri().required(),
+  is_active: joi.boolean().default(true),
   translations: joi
     .object({
       en: createTranslationEntry.optional(),
@@ -36,6 +37,7 @@ const updateVideoParamType = joi.object({
   title: joi.string().trim().max(255).required(),
   description: joi.string().trim().allow("", null).optional(),
   url: joi.string().uri().required(),
+  is_active: joi.boolean().default(true),
   translations: joi
     .object({
       en: updateTranslationEntry.optional(),

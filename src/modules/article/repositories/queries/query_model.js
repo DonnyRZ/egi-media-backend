@@ -68,6 +68,10 @@ const getManageArticlesParamType = joi.object({
   lang: localeParam,
 });
 
+const getArticleStatsParamType = joi.object({
+  author_id: joi.string().uuid().optional().allow(null),
+});
+
 module.exports = {
   getArticlesParamType,
   getArticleByIdParamType,
@@ -75,4 +79,5 @@ module.exports = {
   getMyArticlesParamType,
   getSavedArticlesParamType,
   getManageArticlesParamType,
+  getArticleStatsParamType,
 };

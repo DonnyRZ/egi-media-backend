@@ -689,6 +689,44 @@ class Query {
     }
   }
 
+  // ─── Dashboard stats (superadmin = all authors; author = own only) ───────────
+  async countArticleStats({ author_id }) {
+    try {
+      const conditions = ["deleted_at IS NULL"];
+      const values = [];
+      if (author_id) {
+        conditions.push("author_id = $1");
+        values.push(author_id);
+      }
+      const whereClause = `WHERE ${conditions.join(" AND ")}`;
+      const query = `
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE status = 'draft')::int AS draft,
+          COUNT(*) FILTER (WHERE status = 'review')::int AS review,
+          COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled,
+          COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+          COUNT(*) FILTER (WHERE status = 'archived')::int AS archived
+        FROM articles
+        ${whereClause}
+      `;
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(
+        result.rows[0] || {
+          total: 0,
+          draft: 0,
+          review: 0,
+          scheduled: 0,
+          published: 0,
+          archived: 0,
+        },
+      );
+    } catch (error) {
+      logger.error(ctx, "countArticleStats", "Error counting article stats", error);
+      return wrapper.error(error);
+    }
+  }
+
   // ─── Count My Articles ────────────────────────────────────────────────────────
   async countMyArticles({ author_id, status }) {
     try {

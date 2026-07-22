@@ -8,7 +8,7 @@ const TRANSLATION_COLUMNS = [
 ];
 
 const RETURNING_COLUMNS = `
-  id, title, description, url,
+  id, title, description, url, is_active,
   title_en, description_en, title_uz, description_uz,
   created_at
 `;
@@ -23,6 +23,7 @@ class YoutubeCommand {
     title,
     description,
     url,
+    is_active,
     created_at,
     title_en,
     description_en,
@@ -31,16 +32,17 @@ class YoutubeCommand {
   }) {
     return this.db.executeQuery(
       `INSERT INTO ${collection} (
-         id, title, description, url, created_at,
+         id, title, description, url, is_active, created_at,
          title_en, description_en, title_uz, description_uz
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING ${RETURNING_COLUMNS};`,
       [
         id,
         title,
         description,
         url,
+        is_active !== false,
         created_at,
         title_en ?? null,
         description_en ?? null,
@@ -55,12 +57,18 @@ class YoutubeCommand {
     title,
     description,
     url,
+    is_active,
     translationValues,
     updatedTranslationFields,
   }) {
-    const setClauses = ["title = $1", "description = $2", "url = $3"];
-    const values = [title, description, url];
-    let idx = 4;
+    const setClauses = [
+      "title = $1",
+      "description = $2",
+      "url = $3",
+      "is_active = $4",
+    ];
+    const values = [title, description, url, is_active !== false];
+    let idx = 5;
 
     for (const col of TRANSLATION_COLUMNS) {
       if (updatedTranslationFields.includes(col)) {

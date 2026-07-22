@@ -1,7 +1,7 @@
 const collection = "youtube_videos";
 
 const SELECT_COLUMNS = `
-  id, title, description, url,
+  id, title, description, url, is_active,
   title_en, description_en, title_uz, description_uz,
   created_at
 `;
@@ -11,32 +11,42 @@ class YoutubeQuery {
     this.db = db;
   }
 
-  async findMany({ page, limit, search }) {
+  async findMany({ page, limit, search, active }) {
     const offset = (page - 1) * limit;
     const searchValue = search ? `%${search}%` : null;
+
+    // active: true (default/public) | false | 'all' (CMS)
+    let activeClause = "is_active = TRUE";
+    if (active === "all") {
+      activeClause = "TRUE";
+    } else if (active === false || active === "false") {
+      activeClause = "is_active = FALSE";
+    }
 
     const rowsQuery = `
       SELECT ${SELECT_COLUMNS}
       FROM ${collection}
-      WHERE (
-        $1::text IS NULL
-        OR title ILIKE $1 OR description ILIKE $1
-        OR title_en ILIKE $1 OR description_en ILIKE $1
-        OR title_uz ILIKE $1 OR description_uz ILIKE $1
-      )
-      ORDER BY title ASC, id ASC
+      WHERE ${activeClause}
+        AND (
+          $1::text IS NULL
+          OR title ILIKE $1 OR description ILIKE $1
+          OR title_en ILIKE $1 OR description_en ILIKE $1
+          OR title_uz ILIKE $1 OR description_uz ILIKE $1
+        )
+      ORDER BY created_at DESC, title ASC, id ASC
       LIMIT $2 OFFSET $3;
     `;
 
     const countQuery = `
       SELECT COUNT(*)::int AS total
       FROM ${collection}
-      WHERE (
-        $1::text IS NULL
-        OR title ILIKE $1 OR description ILIKE $1
-        OR title_en ILIKE $1 OR description_en ILIKE $1
-        OR title_uz ILIKE $1 OR description_uz ILIKE $1
-      );
+      WHERE ${activeClause}
+        AND (
+          $1::text IS NULL
+          OR title ILIKE $1 OR description ILIKE $1
+          OR title_en ILIKE $1 OR description_en ILIKE $1
+          OR title_uz ILIKE $1 OR description_uz ILIKE $1
+        );
     `;
 
     const [rows, count] = await Promise.all([
