@@ -1,5 +1,8 @@
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const {
+  emailLookupCandidates,
+} = require("../../../../helpers/utils/crypto_helper");
 const ctx = "User-Query";
 
 class Query {
@@ -10,15 +13,23 @@ class Query {
   // ─── Cek apakah email sudah terdaftar ──────────────────────────────────────
   async findUserByEmail(email) {
     try {
+      const candidates = emailLookupCandidates(email);
+      if (candidates.length === 0) {
+        return wrapper.error("User not found");
+      }
+
+      const placeholders = candidates
+        .map((_, index) => `$${index + 1}`)
+        .join(", ");
       const query = `
         SELECT id, email
         FROM users
-        WHERE email = $1
+        WHERE email IN (${placeholders})
           AND deleted_at IS NULL
         LIMIT 1
       `;
 
-      const result = await this.db.executeQuery(query, [email]);
+      const result = await this.db.executeQuery(query, candidates);
 
       if (!result || result.rows.length === 0) {
         return wrapper.error("User not found");
