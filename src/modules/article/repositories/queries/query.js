@@ -11,7 +11,7 @@ class Query {
   async findArticleExistsById(id) {
     try {
       const query = `
-        SELECT id, author_id, status
+        SELECT id, author_id, status, published_at
         FROM articles
         WHERE id = $1
           AND deleted_at IS NULL

@@ -252,8 +252,16 @@ class ArticleCommandDomain {
       return wrapper.error(new BadRequestError("published_at is required when status is 'scheduled'"));
     }
 
-    // Set published_at otomatis jika status published
-    const finalPublishedAt = status === "published" && !published_at ? new Date() : published_at;
+    // Preserve the original publication date whenever it already exists.
+    // Only stamp "now" the first time an article becomes published.
+    let finalPublishedAt = article.published_at ?? null;
+    if (status === "published") {
+      finalPublishedAt = published_at ?? article.published_at ?? new Date();
+    } else if (status === "scheduled") {
+      finalPublishedAt = published_at;
+    } else if (published_at !== undefined && published_at !== null) {
+      finalPublishedAt = published_at;
+    }
 
     const result = await this.command.updateArticleStatus({ id, status, published_at: finalPublishedAt });
     if (result.err) {
