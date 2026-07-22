@@ -1,5 +1,17 @@
 const joi = require("joi");
 
+const ARTICLE_PLACEMENTS = [
+  "latest_news",
+  "homepage_hero",
+  "headline",
+  "trending",
+];
+
+const placementsSchema = joi
+  .array()
+  .items(joi.string().valid(...ARTICLE_PLACEMENTS))
+  .unique();
+
 // ─── Translations ─────────────────────────────────────────────────────────────
 // Indonesian (id) is the primary language and lives in the top-level fields.
 // English (en) and Uzbek (uz) are optional. A translation is only meaningful when
@@ -42,6 +54,7 @@ const createArticleParamType = joi.object({
   published_at: joi.date().iso().optional().allow(null),
   topic_ids: joi.array().items(joi.string().uuid()).optional().default([]),
   tag_ids: joi.array().items(joi.string().uuid()).optional().default([]),
+  placements: placementsSchema.default(["latest_news"]),
 });
 
 // ─── Update Article ───────────────────────────────────────────────────────────
@@ -68,6 +81,15 @@ const updateArticleParamType = joi.object({
   published_at: joi.date().iso().optional().allow(null),
   topic_ids: joi.array().items(joi.string().uuid()).optional(),
   tag_ids: joi.array().items(joi.string().uuid()).optional(),
+  placements: placementsSchema.optional(),
+});
+
+// ─── Update Article Placements (quick edit) ───────────────────────────────────
+const updatePlacementsParamType = joi.object({
+  id: joi.string().uuid().required(),
+  actor_id: joi.string().uuid().required(),
+  actor_role: joi.string().required(),
+  placements: placementsSchema.required(),
 });
 
 // ─── Delete Article ───────────────────────────────────────────────────────────
@@ -113,8 +135,10 @@ const recordArticleViewParamType = joi.object({
 });
 
 module.exports = {
+  ARTICLE_PLACEMENTS,
   createArticleParamType,
   updateArticleParamType,
+  updatePlacementsParamType,
   deleteArticleParamType,
   changeStatusParamType,
   saveArticleParamType,

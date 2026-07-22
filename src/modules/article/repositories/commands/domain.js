@@ -44,7 +44,7 @@ class ArticleCommandDomain {
     const {
       author_id, category_id, series_id,
       title, summary, content, featured_image,
-      translations, status, published_at, topic_ids, tag_ids,
+      translations, status, published_at, topic_ids, tag_ids, placements,
     } = payload;
 
     // Validasi: jika status scheduled maka published_at wajib
@@ -69,7 +69,9 @@ class ArticleCommandDomain {
     const articleResult = await this.command.insertArticle({
       id, author_id, category_id, series_id,
       title, slug, summary, content,
-      featured_image, status, published_at, translationValues, topic_ids, tag_ids,
+      featured_image, status, published_at,
+      placements: placements && placements.length > 0 ? placements : ["latest_news"],
+      translationValues, topic_ids, tag_ids,
     });
 
     if (articleResult.err) {
@@ -87,7 +89,7 @@ class ArticleCommandDomain {
       id, actor_id, actor_role,
       category_id, series_id, title, summary,
       content, featured_image, translations, status, published_at,
-      topic_ids, tag_ids,
+      topic_ids, tag_ids, placements,
     } = payload;
 
     // Cek artikel exists
@@ -114,6 +116,7 @@ class ArticleCommandDomain {
     if (published_at !== undefined) updatedFields.push("published_at");
     if (category_id !== undefined) updatedFields.push("category_id");
     if (series_id !== undefined) updatedFields.push("series_id");
+    if (placements !== undefined) updatedFields.push("placements");
 
     // Terjemahan opsional (en/uz): patch per field, regenerasi slug bila title diubah.
     const translationValues = {};
@@ -143,7 +146,7 @@ class ArticleCommandDomain {
 
     const updateResult = await this.command.updateArticle({
       id, category_id, series_id, title, slug,
-      summary, content, featured_image, translationValues, status, published_at,
+      summary, content, featured_image, placements, translationValues, status, published_at,
       topic_ids, tag_ids, updatedFields,
     });
 
@@ -154,6 +157,31 @@ class ArticleCommandDomain {
 
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });
     return wrapper.data(updateResult.data);
+  }
+
+  // ─── Update Article Placements (quick edit) ─────────────────────────────────
+  async updatePlacements(payload) {
+    const { id, actor_id, actor_role, placements } = payload;
+
+    const articleExists = await this.query.findArticleExistsById(id);
+    if (articleExists.err) {
+      logger.error(ctx, "updatePlacements", "Article not found", { id });
+      return wrapper.error(new NotFoundError("Article not found"));
+    }
+
+    const article = articleExists.data;
+    if (actor_role !== "superadmin" && article.author_id !== actor_id) {
+      return wrapper.error(new ForbiddenError("You are not allowed to update this article"));
+    }
+
+    const result = await this.command.updateArticlePlacements({ id, placements });
+    if (result.err) {
+      logger.error(ctx, "updatePlacements", "Failed to update placements", result.err);
+      return wrapper.error(result.err);
+    }
+
+    logger.info(ctx, "updatePlacements", "Article placements updated", { id, placements });
+    return wrapper.data(result.data);
   }
 
   // ─── Delete Article (Soft Delete) ───────────────────────────────────────────

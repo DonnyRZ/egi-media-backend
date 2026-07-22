@@ -68,4 +68,11 @@ module.exports = (server) => {
     verifyRoleName(["author", "superadmin"]),
     articleHandler.changeArticleStatus
   );
+
+  server.patch(
+    "/api/v1/articles/:id/placements",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.updateArticlePlacements
+  );
 };

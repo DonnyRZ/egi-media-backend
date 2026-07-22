@@ -6,6 +6,7 @@ const domain = new Domain(db);
 
 const createArticle = async (payload) => domain.createArticle(payload);
 const updateArticle = async (payload) => domain.updateArticle(payload);
+const updatePlacements = async (payload) => domain.updatePlacements(payload);
 const deleteArticle = async (payload) => domain.deleteArticle(payload);
 const changeStatus = async (payload) => domain.changeStatus(payload);
 const saveArticle = async (payload) => domain.saveArticle(payload);
@@ -16,6 +17,7 @@ const recordArticleView = async (payload) => domain.recordArticleView(payload);
 module.exports = {
   createArticle,
   updateArticle,
+  updatePlacements,
   deleteArticle,
   changeStatus,
   saveArticle,

@@ -17,6 +17,7 @@ const getArticles = async (req, res) => {
     tag_id: req.query.tag_id,
     author_id: req.query.author_id,
     series_id: req.query.series_id,
+    placement: req.query.placement,
     sort: req.query.sort,
     lang: req.query.lang,
   };
@@ -43,6 +44,7 @@ const createArticle = async (req, res) => {
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
     tag_ids: req.body.tag_ids,
+    placements: req.body.placements,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.createArticleParamType);
   if (validatePayload.err) {
@@ -186,12 +188,32 @@ const updateArticle = async (req, res) => {
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
     tag_ids: req.body.tag_ids,
+    placements: req.body.placements,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.updateArticleParamType);
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
   const result = await commandHandler.updateArticle(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── PATCH /api/v1/articles/:id/placements ───────────────────────────────────
+const updateArticlePlacements = async (req, res) => {
+  const payload = {
+    id: req.params.id,
+    actor_id: req.userMeta?.id,
+    actor_role: req.userMeta?.role,
+    placements: req.body.placements,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    commandModel.updatePlacementsParamType,
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await commandHandler.updatePlacements(validatePayload.data);
   return sendResponse(result, res);
 };
 
@@ -280,6 +302,7 @@ module.exports = {
   getArticleById,
   getArticleBySlug,
   updateArticle,
+  updateArticlePlacements,
   deleteArticle,
   changeArticleStatus,
   saveArticle,

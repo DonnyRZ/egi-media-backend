@@ -56,7 +56,7 @@ class Query {
   }
 
   // ─── List Published Articles dengan filter & pagination ───────────────────────
-  async findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, sort }) {
+  async findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort }) {
     try {
       const offset = (page - 1) * limit;
       const conditions = ["a.deleted_at IS NULL", "a.status = 'published'"];
@@ -109,6 +109,12 @@ class Query {
         idx++;
       }
 
+      if (placement) {
+        conditions.push(`$${idx} = ANY(a.placements)`);
+        values.push(placement);
+        idx++;
+      }
+
       const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
       const orderClause =
@@ -132,6 +138,7 @@ class Query {
           a.summary_uz,
           a.featured_image,
           a.status,
+          a.placements,
           a.published_at,
           a.created_at,
           u.id AS author_id,
@@ -159,7 +166,7 @@ class Query {
   }
 
   // ─── Count Published Articles ─────────────────────────────────────────────────
-  async countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id }) {
+  async countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id, placement }) {
     try {
       const conditions = ["a.deleted_at IS NULL", "a.status = 'published'"];
       const values = [];
@@ -211,6 +218,12 @@ class Query {
         idx++;
       }
 
+      if (placement) {
+        conditions.push(`$${idx} = ANY(a.placements)`);
+        values.push(placement);
+        idx++;
+      }
+
       const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
       const query = `
@@ -247,6 +260,7 @@ class Query {
           a.content_uz,
           a.featured_image,
           a.status,
+          a.placements,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -319,6 +333,7 @@ class Query {
           a.content_uz,
           a.featured_image,
           a.status,
+          a.placements,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -484,6 +499,7 @@ class Query {
           a.summary_uz,
           a.featured_image,
           a.status,
+          a.placements,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -588,6 +604,7 @@ class Query {
           a.summary_uz,
           a.featured_image,
           a.status,
+          a.placements,
           a.published_at,
           a.created_at,
           a.updated_at,

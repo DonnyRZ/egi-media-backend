@@ -46,6 +46,7 @@ class ArticleQueryDomain {
       summary: pickLocalized(row, "summary", locale) || null,
       featured_image: row.featured_image || null,
       status: row.status,
+      placements: Array.isArray(row.placements) ? row.placements : ["latest_news"],
       published_at: row.published_at || null,
       created_at: row.created_at,
       updated_at: row.updated_at || null,
@@ -73,12 +74,12 @@ class ArticleQueryDomain {
 
   // ─── Get All Published Articles ─────────────────────────────────────────────
   async getArticles(payload) {
-    const { page, limit, search, category_id, topic_id, tag_id, author_id, series_id, sort, lang } = payload;
+    const { page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort, lang } = payload;
     const requestedLocale = lang || DEFAULT_LOCALE;
 
     const [articlesResult, countResult] = await Promise.all([
-      this.query.findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, sort }),
-      this.query.countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id }),
+      this.query.findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort }),
+      this.query.countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id, placement }),
     ]);
 
     if (articlesResult.err) {
@@ -142,6 +143,7 @@ class ArticleQueryDomain {
       translations,
       featured_image: row.featured_image || null,
       status: row.status,
+      placements: Array.isArray(row.placements) ? row.placements : ["latest_news"],
       published_at: row.published_at || null,
       created_at: row.created_at,
       updated_at: row.updated_at,
