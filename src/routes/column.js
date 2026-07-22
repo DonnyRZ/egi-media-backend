@@ -39,13 +39,11 @@ module.exports = (server) => {
   server.post(
     "/api/v1/columns/:id/comments",
     verifyToken,
-    verifyRoleName(writerRoles),
     columnHandler.createComment
   );
   server.delete(
     "/api/v1/columns/:id/comments/:commentId",
     verifyToken,
-    verifyRoleName(writerRoles),
     columnHandler.deleteComment
   );
 

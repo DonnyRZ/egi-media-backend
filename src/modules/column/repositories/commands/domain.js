@@ -377,9 +377,21 @@ class ColumnCommandDomain {
       return wrapper.error(new NotFoundError("Comment not found"));
     }
 
+    const columnExists = await this.query.findColumnExistsById(column_id);
+    if (columnExists.err) {
+      return wrapper.error(new NotFoundError("Column not found"));
+    }
+
     const comment = commentExists.data;
-    if (actor_role !== "superadmin" && comment.user_id !== actor_id) {
-      return wrapper.error(new ForbiddenError("You can only delete your own comment"));
+    const isCommentOwner = comment.user_id === actor_id;
+    const isColumnAuthor = columnExists.data.author_id === actor_id;
+    const isSuperadmin = actor_role === "superadmin";
+    if (!isSuperadmin && !isColumnAuthor && !isCommentOwner) {
+      return wrapper.error(
+        new ForbiddenError(
+          "Only the comment owner, column author, or superadmin can delete this comment"
+        )
+      );
     }
 
     const result = await this.command.softDeleteComment(comment_id);
