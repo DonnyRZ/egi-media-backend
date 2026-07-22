@@ -1,9 +1,10 @@
 -- Member users test fixture
 -- Password for all members: SuperAdmin@123 (bcrypt hash)
--- Logins:
+-- Logins (plaintext → encrypted with ENCRYPTION_KEY before insert):
 --   member-one@example.com
 --   member-two@example.com
 --   member-three@example.com
+-- Emails below are AES-encrypted with the project ENCRYPTION_KEY.
 
 INSERT INTO users (
   id,
@@ -20,7 +21,7 @@ INSERT INTO users (
 ) VALUES
   (
     '00000000-0000-4000-8000-000000000111',
-    'member-one@example.com',
+    'UEZIGB/YoJMSFLtoz3P2Zl/6PChdbj/Jf6UV4dtMxJM=',
     '$2b$12$JI1Elt32j.OoboSAQw7XPuG/VmzVzLvQkOeHUu4Aon.yI9GJYy2NW',
     'Member One',
     'member',
@@ -33,7 +34,7 @@ INSERT INTO users (
   ),
   (
     '00000000-0000-4000-8000-000000000112',
-    'member-two@example.com',
+    '1Mm+pNHSjtYHRzWTfytaTonsdYwqWizQYyOINkE+Z1s=',
     '$2b$12$JI1Elt32j.OoboSAQw7XPuG/VmzVzLvQkOeHUu4Aon.yI9GJYy2NW',
     'Member Two',
     'member',
@@ -46,7 +47,7 @@ INSERT INTO users (
   ),
   (
     '00000000-0000-4000-8000-000000000113',
-    'member-three@example.com',
+    '3RmaOup2LD7+ZyxdangsQJRjGbxda+OMiARApoJhekY=',
     '$2b$12$JI1Elt32j.OoboSAQw7XPuG/VmzVzLvQkOeHUu4Aon.yI9GJYy2NW',
     'Member Three',
     'member',
