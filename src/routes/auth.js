@@ -20,4 +20,5 @@ module.exports = (server) => {
   server.post("/api/v1/auth/logout", verifyToken, authHandler.logout);
   server.patch("/api/v1/auth/change-password", verifyToken, authHandler.changePassword);
   server.get("/api/v1/auth/me", verifyToken, authHandler.getMe);
+  server.patch("/api/v1/auth/me", verifyToken, authHandler.updateMe);
 };

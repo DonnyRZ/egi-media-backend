@@ -345,6 +345,36 @@ class Auth {
     return wrapper.data({ message: "Password changed successfully" });
   }
 
+  // ─── Update Me (display name) ────────────────────────────────────────────────
+  async updateMe(payload) {
+    const { user_id, full_name } = payload;
+
+    const userResult = await this.query.findUserById(user_id);
+    if (userResult.err) {
+      return wrapper.error(new NotFoundError("User not found"));
+    }
+
+    const now = new Date();
+    const result = await this.command.updateUser(
+      { id: user_id },
+      { full_name, updated_at: now }
+    );
+
+    if (result.err) {
+      logger.error(ctx, "updateMe", "Failed to update user", result.err);
+      return wrapper.error(result.err);
+    }
+
+    const refreshed = await this.query.findUserById(user_id);
+    if (refreshed.err) {
+      return wrapper.error(new NotFoundError("User not found"));
+    }
+
+    const { password_hash, ...safeUser } = refreshed.data;
+    logger.info(ctx, "updateMe", "User profile updated", { user_id });
+    return wrapper.data(safeUser);
+  }
+
   // ─── Google Login (OAuth Callback) ──────────────────────────────────────────
   async googleLogin(payload) {
     const { id: googleId, email, name, picture } = payload;
