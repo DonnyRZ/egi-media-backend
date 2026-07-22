@@ -14,6 +14,7 @@ const {
 const config = require("../../../../config/global_config");
 const { addEmailJob } = require("../../../../helpers/queues/email.queue");
 const verifyEmailTemplate = require("../../../../helpers/utils/verifyEmail");
+const resetPasswordEmailTemplate = require("../../../../helpers/utils/resetPasswordEmail");
 
 const ctx = "Auth-Command-Domain";
 
@@ -267,10 +268,28 @@ class Auth {
       created_at: now,
     });
 
-    // Log token untuk development (email service belum aktif)
+    // Kirim email reset — link mengarah ke frontend Next.js
+    const frontendUrl = config.get("/frontendUrl") || "http://localhost:3000";
+    const resetUrl = `${frontendUrl.replace(/\/$/, "")}/id/reset-password?token=${resetToken}`;
+    const emailHtml = resetPasswordEmailTemplate({
+      name: user.full_name,
+      resetUrl,
+    });
+
+    // Always log the reset URL so local/dev can complete reset without SMTP/Redis.
     logger.info(ctx, "forgotPassword", "Password reset token generated", {
       userId: user.id,
       resetToken,
+      resetUrl,
+    });
+
+    // Fire-and-forget: never block the response on mail delivery.
+    void addEmailJob({
+      to: email,
+      subject: "Reset Your Password - Egi Media",
+      html: emailHtml,
+    }).catch((emailError) => {
+      logger.error(ctx, "forgotPassword", "Failed to send reset email", emailError);
     });
 
     return wrapper.data({ message: "If this email is registered, a reset link has been sent" });
