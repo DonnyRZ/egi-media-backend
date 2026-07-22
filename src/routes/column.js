@@ -12,6 +12,12 @@ module.exports = (server) => {
   // Authenticated list routes (before /:id)
   server.get("/api/v1/columns/me", verifyToken, verifyRoleName(writerRoles), columnHandler.getMyColumns);
   server.get(
+    "/api/v1/columns/me/:id",
+    verifyToken,
+    verifyRoleName(writerRoles),
+    columnHandler.getMyColumnById
+  );
+  server.get(
     "/api/v1/columns/pending",
     verifyToken,
     verifyRoleName(["superadmin"]),
