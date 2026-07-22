@@ -2,19 +2,70 @@ const crypto = require("crypto");
 const CryptoJS = require("crypto-js");
 
 const algorithm = "aes-256-cbc";
-const rawKey = process.env.ENCRYPTION_KEY || "antigravity_default_secret_key_123456";
-const ENCRYPTION_KEY = crypto.createHash("sha256").update(rawKey).digest(); // Guaranteed to be 32 bytes
-const DET_IV = crypto.createHash("md5").update("cc_backend_iv_16").digest(); // Guaranteed to be 16 bytes
-
 const defaultRawKey = "antigravity_default_secret_key_123456";
-const DEFAULT_ENCRYPTION_KEY = crypto.createHash("sha256").update(defaultRawKey).digest();
+const DET_IV = crypto.createHash("md5").update("cc_backend_iv_16").digest();
+const DEFAULT_ENCRYPTION_KEY = crypto
+  .createHash("sha256")
+  .update(defaultRawKey)
+  .digest();
+
+// Lazy key resolution so dotenv/global_config can populate ENCRYPTION_KEY
+// before the first encrypt/decrypt call.
+let cachedRawKey = null;
+let cachedEncryptionKey = null;
+let cachedLegacyKeys = null;
+
+const getRawKey = () => {
+  if (cachedRawKey === null) {
+    cachedRawKey = process.env.ENCRYPTION_KEY || defaultRawKey;
+  }
+  return cachedRawKey;
+};
+
+const getEncryptionKey = () => {
+  if (cachedEncryptionKey === null) {
+    cachedEncryptionKey = crypto
+      .createHash("sha256")
+      .update(getRawKey())
+      .digest();
+  }
+  return cachedEncryptionKey;
+};
+
+const getLegacyRawKeys = () => {
+  if (cachedLegacyKeys === null) {
+    const legacy = String(process.env.ENCRYPTION_KEY_LEGACY || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    cachedLegacyKeys = [defaultRawKey, ...legacy].filter(
+      (value, index, arr) => value && arr.indexOf(value) === index,
+    );
+  }
+  return cachedLegacyKeys;
+};
+
+const looksLikeEmail = (value) =>
+  typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const decryptWithKey = (ciphertext, keyBuffer) => {
+  const decipher = crypto.createDecipheriv(algorithm, keyBuffer, DET_IV);
+  return (
+    decipher.update(String(ciphertext), "base64", "utf8") +
+    decipher.final("utf8")
+  );
+};
 
 const encrypt = (text) => {
   if (text === null || text === undefined || text === "") {
     return text;
   }
   try {
-    const cipher = crypto.createCipheriv(algorithm, ENCRYPTION_KEY, DET_IV);
+    const cipher = crypto.createCipheriv(
+      algorithm,
+      getEncryptionKey(),
+      DET_IV,
+    );
     let encrypted = cipher.update(String(text), "utf8", "base64");
     encrypted += cipher.final("base64");
     return encrypted;
@@ -27,40 +78,78 @@ const decrypt = (ciphertext) => {
   if (ciphertext === null || ciphertext === undefined || ciphertext === "") {
     return ciphertext;
   }
+
+  // Already plaintext (legacy/seed rows).
+  if (looksLikeEmail(ciphertext)) {
+    return ciphertext;
+  }
+
   try {
-    // Determine if it is a CryptoJS string (Base64 for "Salted__")
     if (typeof ciphertext === "string" && ciphertext.startsWith("U2FsdGVkX1")) {
-      const bytes = CryptoJS.AES.decrypt(ciphertext, rawKey);
+      const bytes = CryptoJS.AES.decrypt(ciphertext, getRawKey());
       const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
-      // If decryption fails, it may return empty string
       if (decryptedString) {
         return decryptedString;
       }
     }
 
-    const decipher = crypto.createDecipheriv(algorithm, ENCRYPTION_KEY, DET_IV);
-    let decrypted = decipher.update(String(ciphertext), "base64", "utf8");
-    decrypted += decipher.final("utf8");
-    return decrypted;
+    return decryptWithKey(ciphertext, getEncryptionKey());
   } catch (error) {
-    try {
-      const decipherFallback = crypto.createDecipheriv(algorithm, DEFAULT_ENCRYPTION_KEY, DET_IV);
-      let decryptedFallback = decipherFallback.update(String(ciphertext), "base64", "utf8");
-      decryptedFallback += decipherFallback.final("utf8");
-      return decryptedFallback;
-    } catch (fallbackError) {
-      // If fallback decryption fails, return original value (fallback for unencrypted data)
-      return ciphertext;
+    for (const legacyRaw of getLegacyRawKeys()) {
+      try {
+        const legacyKey = crypto
+          .createHash("sha256")
+          .update(legacyRaw)
+          .digest();
+        const decrypted = decryptWithKey(ciphertext, legacyKey);
+        if (decrypted) {
+          return decrypted;
+        }
+      } catch {
+        // try next legacy key
+      }
     }
+    return ciphertext;
   }
 };
 
-const sensitiveKeys = ["email", "username", "telephone", "name", "address", "worker_name", "worker_telephone"];
+/**
+ * Candidate values used when looking up a user by email across storage formats.
+ */
+const emailLookupCandidates = (email) => {
+  const normalized = String(email || "").trim();
+  if (!normalized) return [];
+
+  const candidates = [encrypt(normalized), normalized];
+
+  for (const legacyRaw of getLegacyRawKeys()) {
+    try {
+      const legacyKey = crypto.createHash("sha256").update(legacyRaw).digest();
+      const cipher = crypto.createCipheriv(algorithm, legacyKey, DET_IV);
+      candidates.push(
+        cipher.update(normalized, "utf8", "base64") + cipher.final("base64"),
+      );
+    } catch {
+      // ignore invalid legacy key material
+    }
+  }
+
+  return Array.from(new Set(candidates.filter(Boolean)));
+};
+
+const sensitiveKeys = [
+  "email",
+  "username",
+  "telephone",
+  "name",
+  "address",
+  "worker_name",
+  "worker_telephone",
+];
 
 const isSensitiveKey = (key) => {
   if (!key) return false;
-  const lowerKey = key.toLowerCase();
-  return sensitiveKeys.includes(lowerKey);
+  return sensitiveKeys.includes(key.toLowerCase());
 };
 
 const encryptDocument = (doc) => {
@@ -77,7 +166,7 @@ const encryptDocument = (doc) => {
 const decryptRows = (rows) => {
   if (!rows) return rows;
   const isArray = Array.isArray(rows);
-  const data = isArray ? rows.map(r => ({ ...r })) : [{ ...rows }];
+  const data = isArray ? rows.map((row) => ({ ...row })) : [{ ...rows }];
   for (const row of data) {
     if (row && typeof row === "object") {
       for (const key of Object.keys(row)) {
@@ -93,7 +182,8 @@ const decryptRows = (rows) => {
 module.exports = {
   encrypt,
   decrypt,
+  emailLookupCandidates,
   isSensitiveKey,
   encryptDocument,
-  decryptRows
+  decryptRows,
 };

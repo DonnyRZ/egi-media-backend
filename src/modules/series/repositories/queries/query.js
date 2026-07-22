@@ -98,7 +98,11 @@ class SeriesQuery {
 
   async hasArticleReference(id) {
     return this.db.executeQuery(
-      "SELECT EXISTS (SELECT 1 FROM articles WHERE series_id = $1) AS exists;",
+      `SELECT EXISTS (
+         SELECT 1 FROM articles
+         WHERE series_id = $1
+           AND deleted_at IS NULL
+       ) AS exists;`,
       [id]
     );
   }

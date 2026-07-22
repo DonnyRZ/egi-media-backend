@@ -3,6 +3,7 @@ const Command = require("./command");
 const Query = require("../queries/query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const { insertAuditLog } = require("../../../../helpers/utils/audit_log");
 const {
   NotFoundError,
   ConflictError,
@@ -24,19 +25,53 @@ const generateSlug = (title) => {
 // Optional translated locales (Indonesian is primary and stored in base columns).
 const TRANSLATION_LOCALES = ["en", "uz"];
 
+const NON_DRAFT_STATUSES = ["review", "scheduled", "published"];
+
 // ─── Validasi status transition yang diizinkan ────────────────────────────────
 const ALLOWED_TRANSITIONS = {
   draft: ["review", "scheduled", "published"],
   review: ["published", "draft"],
   scheduled: ["published", "draft"],
   published: ["archived"],
-  archived: [],
+  archived: ["draft", "published"],
 };
 
 class ArticleCommandDomain {
   constructor(db) {
+    this.db = db;
     this.command = new Command(db);
     this.query = new Query(db);
+  }
+
+  async writeAudit({
+    user_id,
+    record_id,
+    action,
+    old_data = null,
+    new_data = null,
+    ip_address = null,
+    user_agent = null,
+  }) {
+    await insertAuditLog(this.db, {
+      user_id,
+      table_name: "articles",
+      record_id,
+      action,
+      old_data,
+      new_data,
+      ip_address,
+      user_agent,
+    });
+  }
+
+  requireCategoryForStatus(status, categoryId) {
+    if (!NON_DRAFT_STATUSES.includes(status)) return null;
+    if (categoryId) return null;
+    return wrapper.error(
+      new BadRequestError(
+        "category_id is required before submit for review, schedule, or publish",
+      ),
+    );
   }
 
   // ─── Create Article ─────────────────────────────────────────────────────────
@@ -45,12 +80,16 @@ class ArticleCommandDomain {
       author_id, category_id, series_id,
       title, summary, content, featured_image,
       translations, status, published_at, topic_ids, tag_ids, placements,
+      ip_address, user_agent,
     } = payload;
 
     // Validasi: jika status scheduled maka published_at wajib
     if (status === "scheduled" && !published_at) {
       return wrapper.error(new BadRequestError("published_at is required when status is 'scheduled'"));
     }
+
+    const categoryError = this.requireCategoryForStatus(status, category_id);
+    if (categoryError) return categoryError;
 
     const id = uuidv4();
     const slug = generateSlug(title);
@@ -79,6 +118,19 @@ class ArticleCommandDomain {
       return wrapper.error(articleResult.err);
     }
 
+    await this.writeAudit({
+      user_id: author_id,
+      record_id: id,
+      action: "CREATE",
+      new_data: {
+        title,
+        status: status || "draft",
+        category_id: category_id || null,
+      },
+      ip_address,
+      user_agent,
+    });
+
     logger.info(ctx, "createArticle", "Article created successfully", { id });
     return wrapper.data(articleResult.data);
   }
@@ -90,6 +142,7 @@ class ArticleCommandDomain {
       category_id, series_id, title, summary,
       content, featured_image, translations, status, published_at,
       topic_ids, tag_ids, placements,
+      ip_address, user_agent,
     } = payload;
 
     // Cek artikel exists
@@ -105,6 +158,12 @@ class ArticleCommandDomain {
     if (actor_role !== "superadmin" && article.author_id !== actor_id) {
       return wrapper.error(new ForbiddenError("You are not allowed to update this article"));
     }
+
+    const nextStatus = status !== undefined ? status : article.status;
+    const nextCategoryId =
+      category_id !== undefined ? category_id : article.category_id;
+    const categoryError = this.requireCategoryForStatus(nextStatus, nextCategoryId);
+    if (categoryError) return categoryError;
 
     // Tentukan field mana yang akan diupdate
     const updatedFields = [];
@@ -155,13 +214,31 @@ class ArticleCommandDomain {
       return wrapper.error(updateResult.err);
     }
 
+    await this.writeAudit({
+      user_id: actor_id,
+      record_id: id,
+      action: "UPDATE",
+      old_data: {
+        title: article.title,
+        status: article.status,
+        category_id: article.category_id,
+      },
+      new_data: {
+        title: title ?? article.title,
+        status: nextStatus,
+        category_id: nextCategoryId ?? null,
+      },
+      ip_address,
+      user_agent,
+    });
+
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });
     return wrapper.data(updateResult.data);
   }
 
   // ─── Update Article Placements (quick edit) ─────────────────────────────────
   async updatePlacements(payload) {
-    const { id, actor_id, actor_role, placements } = payload;
+    const { id, actor_id, actor_role, placements, ip_address, user_agent } = payload;
 
     const articleExists = await this.query.findArticleExistsById(id);
     if (articleExists.err) {
@@ -180,13 +257,23 @@ class ArticleCommandDomain {
       return wrapper.error(result.err);
     }
 
+    await this.writeAudit({
+      user_id: actor_id,
+      record_id: id,
+      action: "UPDATE",
+      old_data: { title: article.title, status: article.status },
+      new_data: { title: article.title, status: article.status, placements },
+      ip_address,
+      user_agent,
+    });
+
     logger.info(ctx, "updatePlacements", "Article placements updated", { id, placements });
     return wrapper.data(result.data);
   }
 
   // ─── Delete Article (Soft Delete) ───────────────────────────────────────────
   async deleteArticle(payload) {
-    const { id, actor_id, actor_role } = payload;
+    const { id, actor_id, actor_role, ip_address, user_agent } = payload;
 
     // Cek artikel exists
     const articleExists = await this.query.findArticleExistsById(id);
@@ -208,13 +295,26 @@ class ArticleCommandDomain {
       return wrapper.error(result.err);
     }
 
+    await this.writeAudit({
+      user_id: actor_id,
+      record_id: id,
+      action: "DELETE",
+      old_data: {
+        title: article.title,
+        status: article.status,
+        category_id: article.category_id,
+      },
+      ip_address,
+      user_agent,
+    });
+
     logger.info(ctx, "deleteArticle", "Article soft deleted successfully", { id });
     return wrapper.data(true);
   }
 
   // ─── Change Article Status ──────────────────────────────────────────────────
   async changeStatus(payload) {
-    const { id, actor_id, actor_role, status, published_at } = payload;
+    const { id, actor_id, actor_role, status, published_at, ip_address, user_agent } = payload;
 
     // Cek artikel exists
     const articleExists = await this.query.findArticleExistsById(id);
@@ -230,12 +330,12 @@ class ArticleCommandDomain {
       return wrapper.error(new ForbiddenError("You are not allowed to change this article's status"));
     }
 
-    // Author hanya boleh submit review atau kembali ke draft. Publish, schedule,
-    // dan archive adalah kewenangan superadmin.
+    // Author hanya boleh submit review atau kembali ke draft (termasuk unarchive
+    // ke draft). Publish, schedule, archive, dan republish = superadmin.
     const AUTHOR_ALLOWED_STATUS = ["review", "draft"];
     if (actor_role !== "superadmin" && !AUTHOR_ALLOWED_STATUS.includes(status)) {
       return wrapper.error(
-        new ForbiddenError("Only superadmin can publish, schedule, or archive articles")
+        new ForbiddenError("Only superadmin can publish, schedule, archive, or republish articles")
       );
     }
 
@@ -247,19 +347,48 @@ class ArticleCommandDomain {
       );
     }
 
+    const categoryError = this.requireCategoryForStatus(status, article.category_id);
+    if (categoryError) return categoryError;
+
     // Validasi: scheduled butuh published_at
     if (status === "scheduled" && !published_at) {
       return wrapper.error(new BadRequestError("published_at is required when status is 'scheduled'"));
     }
 
-    // Set published_at otomatis jika status published
-    const finalPublishedAt = status === "published" && !published_at ? new Date() : published_at;
+    // Preserve the original publication date whenever it already exists.
+    // Only stamp "now" the first time an article becomes published.
+    let finalPublishedAt = article.published_at ?? null;
+    if (status === "published") {
+      finalPublishedAt = published_at ?? article.published_at ?? new Date();
+    } else if (status === "scheduled") {
+      finalPublishedAt = published_at;
+    } else if (published_at !== undefined && published_at !== null) {
+      finalPublishedAt = published_at;
+    }
 
     const result = await this.command.updateArticleStatus({ id, status, published_at: finalPublishedAt });
     if (result.err) {
       logger.error(ctx, "changeStatus", "Failed to update article status", result.err);
       return wrapper.error(result.err);
     }
+
+    await this.writeAudit({
+      user_id: actor_id,
+      record_id: id,
+      action: "STATUS_CHANGE",
+      old_data: {
+        title: article.title,
+        status: article.status,
+        published_at: article.published_at,
+      },
+      new_data: {
+        title: article.title,
+        status,
+        published_at: finalPublishedAt,
+      },
+      ip_address,
+      user_agent,
+    });
 
     logger.info(ctx, "changeStatus", "Article status changed", { id, status });
     return wrapper.data(result.data);

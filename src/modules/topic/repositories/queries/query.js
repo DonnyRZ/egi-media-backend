@@ -66,7 +66,13 @@ class TopicQuery {
 
   async hasArticleReference(id) {
     return this.db.executeQuery(
-      "SELECT EXISTS (SELECT 1 FROM article_topics WHERE topic_id = $1) AS exists;",
+      `SELECT EXISTS (
+         SELECT 1
+         FROM article_topics at2
+         INNER JOIN articles a ON a.id = at2.article_id
+         WHERE at2.topic_id = $1
+           AND a.deleted_at IS NULL
+       ) AS exists;`,
       [id]
     );
   }

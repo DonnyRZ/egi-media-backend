@@ -11,6 +11,17 @@ class TagQuery {
   }
   async findOneById(id) { return this.db.executeQuery(`SELECT id, name, slug, created_at FROM ${collection} WHERE id = $1 LIMIT 1;`, [id]); }
   async findOneBySlug(slug) { return this.db.executeQuery(`SELECT id, name, slug, created_at FROM ${collection} WHERE slug = $1 LIMIT 1;`, [slug]); }
-  async hasArticleReference(id) { return this.db.executeQuery("SELECT EXISTS (SELECT 1 FROM article_tags WHERE tag_id = $1) AS exists;", [id]); }
+  async hasArticleReference(id) {
+    return this.db.executeQuery(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM article_tags atg
+         INNER JOIN articles a ON a.id = atg.article_id
+         WHERE atg.tag_id = $1
+           AND a.deleted_at IS NULL
+       ) AS exists;`,
+      [id],
+    );
+  }
 }
 module.exports = TagQuery;
