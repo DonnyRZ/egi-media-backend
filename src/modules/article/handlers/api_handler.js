@@ -6,6 +6,11 @@ const validator = require("../../../helpers/utils/validator");
 const { sendResponse } = require("../../../helpers/utils/response");
 const { SUCCESS } = require("../../../helpers/http-status/status_code");
 
+const requestAuditMeta = (req) => ({
+  ip_address: req.headers["x-forwarded-for"] || req.socket?.remoteAddress || null,
+  user_agent: req.headers["user-agent"] || null,
+});
+
 // ─── GET /api/v1/articles ──────────────────────────────────────────────────────
 const getArticles = async (req, res) => {
   const payload = {
@@ -44,13 +49,14 @@ const createArticle = async (req, res) => {
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
     tag_ids: req.body.tag_ids,
-    placements: req.body.placements,
-  };
   const validatePayload = validator.isValidPayload(payload, commandModel.createArticleParamType);
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
-  const result = await commandHandler.createArticle(validatePayload.data);
+  const result = await commandHandler.createArticle({
+    ...validatePayload.data,
+    ...requestAuditMeta(req),
+  });
   return sendResponse(result, res, SUCCESS.CREATED);
 };
 
@@ -194,7 +200,10 @@ const updateArticle = async (req, res) => {
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
-  const result = await commandHandler.updateArticle(validatePayload.data);
+  const result = await commandHandler.updateArticle({
+    ...validatePayload.data,
+    ...requestAuditMeta(req),
+  });
   return sendResponse(result, res);
 };
 
@@ -213,7 +222,10 @@ const updateArticlePlacements = async (req, res) => {
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
-  const result = await commandHandler.updatePlacements(validatePayload.data);
+  const result = await commandHandler.updatePlacements({
+    ...validatePayload.data,
+    ...requestAuditMeta(req),
+  });
   return sendResponse(result, res);
 };
 
@@ -228,7 +240,10 @@ const deleteArticle = async (req, res) => {
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
-  const result = await commandHandler.deleteArticle(validatePayload.data);
+  const result = await commandHandler.deleteArticle({
+    ...validatePayload.data,
+    ...requestAuditMeta(req),
+  });
   return sendResponse(result, res);
 };
 
@@ -245,7 +260,10 @@ const changeArticleStatus = async (req, res) => {
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
-  const result = await commandHandler.changeStatus(validatePayload.data);
+  const result = await commandHandler.changeStatus({
+    ...validatePayload.data,
+    ...requestAuditMeta(req),
+  });
   return sendResponse(result, res);
 };
 
