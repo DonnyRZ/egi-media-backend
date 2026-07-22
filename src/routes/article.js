@@ -13,6 +13,22 @@ module.exports = (server) => {
   server.get("/api/v1/articles/me", verifyToken, articleHandler.getMyArticles);
   server.get("/api/v1/articles/saved", verifyToken, articleHandler.getSavedArticles);
 
+  // Editorial CMS: seluruh artikel (semua author & status) untuk author/superadmin.
+  server.get(
+    "/api/v1/articles/manage",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.getManageArticles
+  );
+
+  // Editorial CMS dashboard stats (superadmin = all; author = own).
+  server.get(
+    "/api/v1/articles/stats",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.getArticleStats
+  );
+
   // Detail by ID
   server.get("/api/v1/articles/:id", articleHandler.getArticleById);
 
@@ -51,5 +67,12 @@ module.exports = (server) => {
     verifyToken,
     verifyRoleName(["author", "superadmin"]),
     articleHandler.changeArticleStatus
+  );
+
+  server.patch(
+    "/api/v1/articles/:id/placements",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.updateArticlePlacements
   );
 };

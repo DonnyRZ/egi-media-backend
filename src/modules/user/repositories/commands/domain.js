@@ -125,7 +125,7 @@ class UserCommandDomain {
 
   // ─── Add Author (superadmin only) ───────────────────────────────────────────
   async addAuthor(payload) {
-    const { email, password, full_name } = payload;
+    const { email, password, full_name, role = "author" } = payload;
 
     // Cek apakah email sudah terdaftar
     const existingUser = await this.query.findUserByEmail(email);
@@ -142,7 +142,7 @@ class UserCommandDomain {
       email,
       password_hash: passwordHash,
       full_name,
-      role: "author",
+      role,
       login_provider: "email",
       email_verified_at: now,
       last_login_at: null,

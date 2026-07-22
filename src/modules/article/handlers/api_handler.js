@@ -17,6 +17,7 @@ const getArticles = async (req, res) => {
     tag_id: req.query.tag_id,
     author_id: req.query.author_id,
     series_id: req.query.series_id,
+    placement: req.query.placement,
     sort: req.query.sort,
     lang: req.query.lang,
   };
@@ -43,6 +44,7 @@ const createArticle = async (req, res) => {
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
     tag_ids: req.body.tag_ids,
+    placements: req.body.placements,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.createArticleParamType);
   if (validatePayload.err) {
@@ -66,6 +68,47 @@ const getMyArticles = async (req, res) => {
     return sendResponse(validatePayload, res);
   }
   const result = await queryHandler.getMyArticles(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── GET /api/v1/articles/stats ────────────────────────────────────────────────
+// Editorial CMS dashboard: superadmin = newsroom-wide; author = own articles only.
+const getArticleStats = async (req, res) => {
+  const role = req.userMeta?.role;
+  const payload = {
+    author_id: role === "superadmin" ? null : req.userMeta?.id,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    queryModel.getArticleStatsParamType,
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getArticleStats(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── GET /api/v1/articles/manage ───────────────────────────────────────────────
+// Editorial CMS: list semua artikel (semua author & status) untuk author/superadmin.
+const getManageArticles = async (req, res) => {
+  const payload = {
+    page: req.query.page,
+    limit: req.query.limit,
+    search: req.query.search,
+    status: req.query.status,
+    author_id: req.query.author_id,
+    category_id: req.query.category_id,
+    topic_id: req.query.topic_id,
+    tag_id: req.query.tag_id,
+    series_id: req.query.series_id,
+    lang: req.query.lang,
+  };
+  const validatePayload = validator.isValidPayload(payload, queryModel.getManageArticlesParamType);
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getManageArticles(validatePayload.data);
   return sendResponse(result, res);
 };
 
@@ -145,12 +188,32 @@ const updateArticle = async (req, res) => {
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
     tag_ids: req.body.tag_ids,
+    placements: req.body.placements,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.updateArticleParamType);
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
   }
   const result = await commandHandler.updateArticle(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── PATCH /api/v1/articles/:id/placements ───────────────────────────────────
+const updateArticlePlacements = async (req, res) => {
+  const payload = {
+    id: req.params.id,
+    actor_id: req.userMeta?.id,
+    actor_role: req.userMeta?.role,
+    placements: req.body.placements,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    commandModel.updatePlacementsParamType,
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await commandHandler.updatePlacements(validatePayload.data);
   return sendResponse(result, res);
 };
 
@@ -233,10 +296,13 @@ module.exports = {
   getArticles,
   createArticle,
   getMyArticles,
+  getArticleStats,
+  getManageArticles,
   getSavedArticles,
   getArticleById,
   getArticleBySlug,
   updateArticle,
+  updateArticlePlacements,
   deleteArticle,
   changeArticleStatus,
   saveArticle,

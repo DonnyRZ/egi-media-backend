@@ -46,8 +46,10 @@ class ArticleQueryDomain {
       summary: pickLocalized(row, "summary", locale) || null,
       featured_image: row.featured_image || null,
       status: row.status,
+      placements: Array.isArray(row.placements) ? row.placements : ["latest_news"],
       published_at: row.published_at || null,
       created_at: row.created_at,
+      updated_at: row.updated_at || null,
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
@@ -72,12 +74,12 @@ class ArticleQueryDomain {
 
   // ─── Get All Published Articles ─────────────────────────────────────────────
   async getArticles(payload) {
-    const { page, limit, search, category_id, topic_id, tag_id, author_id, series_id, sort, lang } = payload;
+    const { page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort, lang } = payload;
     const requestedLocale = lang || DEFAULT_LOCALE;
 
     const [articlesResult, countResult] = await Promise.all([
-      this.query.findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, sort }),
-      this.query.countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id }),
+      this.query.findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort }),
+      this.query.countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id, placement }),
     ]);
 
     if (articlesResult.err) {
@@ -141,6 +143,7 @@ class ArticleQueryDomain {
       translations,
       featured_image: row.featured_image || null,
       status: row.status,
+      placements: Array.isArray(row.placements) ? row.placements : ["latest_news"],
       published_at: row.published_at || null,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -296,6 +299,52 @@ class ArticleQueryDomain {
       items,
       meta: { total, page, limit, total_pages },
     });
+  }
+
+  // ─── Get Manage Articles (editorial: semua author & status) ─────────────────
+  async getManageArticles(payload) {
+    const { page, limit, search, status, author_id, category_id, topic_id, tag_id, series_id, lang } = payload;
+    const requestedLocale = lang || DEFAULT_LOCALE;
+
+    const filters = { search, status, author_id, category_id, topic_id, tag_id, series_id };
+    const [articlesResult, countResult] = await Promise.all([
+      this.query.findManageArticles({ page, limit, ...filters }),
+      this.query.countManageArticles(filters),
+    ]);
+
+    if (articlesResult.err) {
+      logger.error(ctx, "getManageArticles", "Failed to fetch manage articles", articlesResult.err);
+      return wrapper.error(articlesResult.err);
+    }
+
+    if (countResult.err) {
+      logger.error(ctx, "getManageArticles", "Failed to count manage articles", countResult.err);
+      return wrapper.error(countResult.err);
+    }
+
+    const total = countResult.data;
+    const total_pages = Math.ceil(total / limit);
+
+    const items = articlesResult.data.map((row) => this.mapListItem(row, requestedLocale));
+
+    logger.info(ctx, "getManageArticles", "Fetched manage articles successfully", { total });
+
+    return wrapper.data({
+      items,
+      meta: { total, page, limit, total_pages },
+    });
+  }
+
+  // ─── Dashboard article stats ────────────────────────────────────────────────
+  async getArticleStats(payload) {
+    const result = await this.query.countArticleStats({
+      author_id: payload.author_id || null,
+    });
+    if (result.err) {
+      logger.error(ctx, "getArticleStats", "Failed to count article stats", result.err);
+      return wrapper.error(result.err);
+    }
+    return wrapper.data(result.data);
   }
 
   // ─── Get Saved Articles ─────────────────────────────────────────────────────

@@ -38,6 +38,7 @@ class YoutubeQueryDomain {
       title: pickLocalized(row, "title", locale),
       description: pickLocalized(row, "description", locale) || null,
       url: row.url,
+      is_active: row.is_active !== false,
       created_at: row.created_at,
     };
   }
@@ -69,6 +70,7 @@ class YoutubeQueryDomain {
       title: pickLocalized(row, "title", locale),
       description: pickLocalized(row, "description", locale) || null,
       url: row.url,
+      is_active: row.is_active !== false,
       translations,
       created_at: row.created_at,
     };

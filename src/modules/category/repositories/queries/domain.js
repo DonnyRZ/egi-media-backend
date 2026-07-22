@@ -37,6 +37,7 @@ class CategoryQueryDomain {
       name: pickLocalized(row, "name", locale),
       slug: pickLocalized(row, "slug", locale),
       description: pickLocalized(row, "description", locale) || null,
+      article_count: row.article_count ?? 0,
       created_at: row.created_at,
       updated_at: row.updated_at,
     };

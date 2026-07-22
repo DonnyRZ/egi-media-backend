@@ -39,6 +39,7 @@ class Command {
     featured_image,
     status,
     published_at,
+    placements,
     translationValues,
     topic_ids,
     tag_ids,
@@ -48,20 +49,20 @@ class Command {
         INSERT INTO articles (
           id, author_id, category_id, series_id,
           title, slug, summary, content,
-          featured_image, status, published_at,
+          featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
           created_at, updated_at
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-          $12, $13, $14, $15, $16, $17, $18, $19,
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+          $13, $14, $15, $16, $17, $18, $19, $20,
           NOW(), NOW()
         )
         RETURNING
           id, author_id, category_id, series_id,
           title, slug, summary, content,
-          featured_image, status, published_at,
+          featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
           created_at, updated_at
@@ -71,6 +72,7 @@ class Command {
         id, author_id, category_id || null, series_id || null,
         title, slug, summary || null, content,
         featured_image || null, status, published_at || null,
+        placements && placements.length > 0 ? placements : ["latest_news"],
         ...TRANSLATION_COLUMNS.map((col) => translationValues?.[col] ?? null),
       ];
       const queries = [{ query, values }];
@@ -95,7 +97,7 @@ class Command {
   }
 
   // ─── Update Article ───────────────────────────────────────────────────────────
-  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, translationValues, topic_ids, tag_ids, updatedFields }) {
+  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, placements, translationValues, topic_ids, tag_ids, updatedFields }) {
     try {
       const setClauses = [];
       const values = [];
@@ -146,6 +148,11 @@ class Command {
         values.push(series_id ?? null);
         idx++;
       }
+      if (updatedFields.includes("placements")) {
+        setClauses.push(`placements = $${idx}`);
+        values.push(placements ?? []);
+        idx++;
+      }
 
       for (const col of TRANSLATION_COLUMNS) {
         if (updatedFields.includes(col)) {
@@ -166,7 +173,7 @@ class Command {
         RETURNING
           id, author_id, category_id, series_id,
           title, slug, summary, content,
-          featured_image, status, published_at,
+          featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
           created_at, updated_at
@@ -200,6 +207,27 @@ class Command {
       return wrapper.data(results[0].rows[0]);
     } catch (error) {
       logger.error(ctx, "updateArticle", "Error updating article", error);
+      return wrapper.error(error);
+    }
+  }
+
+  async updateArticlePlacements({ id, placements }) {
+    try {
+      const query = `
+        UPDATE articles
+        SET placements = $1,
+            updated_at = NOW()
+        WHERE id = $2
+          AND deleted_at IS NULL
+        RETURNING id, placements, updated_at
+      `;
+      const result = await this.db.executeQuery(query, [placements ?? [], id]);
+      if (!result || result.rowCount === 0) {
+        return wrapper.error("Article not found");
+      }
+      return wrapper.data(result.rows[0]);
+    } catch (error) {
+      logger.error(ctx, "updateArticlePlacements", "Error updating placements", error);
       return wrapper.error(error);
     }
   }

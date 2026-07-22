@@ -16,6 +16,21 @@ class TagCommandDomain {
     if (!result) return wrapper.error(new InternalServerError("Unable to create tag"));
     return wrapper.data(result.rows[0]);
   }
+  async updateTag({ id, name }) {
+    const slug = toSlug(name);
+    if (!slug) return wrapper.error(new BadRequestError("Tag name must contain letters or numbers"));
+    const current = await this.query.findOneById(id);
+    if (!current) return wrapper.error(new InternalServerError("Unable to validate tag"));
+    if (current.rows.length === 0) return wrapper.error(new NotFoundError("Tag not found"));
+    const existing = await this.query.findOneBySlug(slug);
+    if (!existing) return wrapper.error(new InternalServerError("Unable to validate tag"));
+    if (existing.rows.length > 0 && existing.rows[0].id !== id) {
+      return wrapper.error(new ConflictError("Tag name already exists"));
+    }
+    const result = await this.command.updateOne({ id, name, slug });
+    if (!result) return wrapper.error(new InternalServerError("Unable to update tag"));
+    return wrapper.data(result.rows[0]);
+  }
   async deleteTag({ id }) {
     const current = await this.query.findOneById(id);
     if (!current) return wrapper.error(new InternalServerError("Unable to validate tag"));

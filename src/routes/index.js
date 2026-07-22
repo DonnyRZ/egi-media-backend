@@ -11,6 +11,7 @@ const Newsletter = require("./newsletter");
 const Youtube = require("./youtube");
 const AuditLog = require("./audit_log");
 const Notification = require("./notification");
+const Upload = require("./upload");
 
 module.exports = (server) => {
   Auth(server);
@@ -26,4 +27,5 @@ module.exports = (server) => {
   Youtube(server);
   AuditLog(server);
   Notification(server);
+  Upload(server);
 };
