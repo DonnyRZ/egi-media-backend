@@ -49,6 +49,8 @@ const createArticle = async (req, res) => {
     published_at: req.body.published_at,
     topic_ids: req.body.topic_ids,
     tag_ids: req.body.tag_ids,
+    placements: req.body.placements,
+  };
   const validatePayload = validator.isValidPayload(payload, commandModel.createArticleParamType);
   if (validatePayload.err) {
     return sendResponse(validatePayload, res);
