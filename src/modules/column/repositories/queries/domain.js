@@ -1,7 +1,10 @@
 const Query = require("./query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
-const { NotFoundError } = require("../../../../helpers/errors");
+const {
+  NotFoundError,
+  ForbiddenError,
+} = require("../../../../helpers/errors");
 const ctx = "Column-Query-Domain";
 
 const DEFAULT_LOCALE = "id";
@@ -159,6 +162,23 @@ class ColumnQueryDomain {
     }
 
     return wrapper.data(this.mapColumnDetail(columnResult.data, requestedLocale));
+  }
+
+  async getMyColumnById(payload) {
+    const { id, author_id, actor_role, lang } = payload;
+    const requestedLocale = lang || DEFAULT_LOCALE;
+
+    const columnResult = await this.query.findColumnById(id);
+    if (columnResult.err) {
+      return wrapper.error(new NotFoundError("Column not found"));
+    }
+
+    const column = columnResult.data;
+    if (actor_role !== "superadmin" && column.author_id !== author_id) {
+      return wrapper.error(new ForbiddenError("You are not allowed to access this column"));
+    }
+
+    return wrapper.data(this.mapColumnDetail(column, requestedLocale));
   }
 
   async getMyColumns(payload) {

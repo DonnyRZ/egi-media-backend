@@ -12,6 +12,12 @@ module.exports = (server) => {
   // Authenticated list routes (before /:id)
   server.get("/api/v1/columns/me", verifyToken, verifyRoleName(writerRoles), columnHandler.getMyColumns);
   server.get(
+    "/api/v1/columns/me/:id",
+    verifyToken,
+    verifyRoleName(writerRoles),
+    columnHandler.getMyColumnById
+  );
+  server.get(
     "/api/v1/columns/pending",
     verifyToken,
     verifyRoleName(["superadmin"]),
@@ -33,13 +39,11 @@ module.exports = (server) => {
   server.post(
     "/api/v1/columns/:id/comments",
     verifyToken,
-    verifyRoleName(writerRoles),
     columnHandler.createComment
   );
   server.delete(
     "/api/v1/columns/:id/comments/:commentId",
     verifyToken,
-    verifyRoleName(writerRoles),
     columnHandler.deleteComment
   );
 

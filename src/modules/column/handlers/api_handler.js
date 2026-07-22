@@ -51,6 +51,19 @@ const getMyColumns = async (req, res) => {
   return sendResponse(result, res);
 };
 
+const getMyColumnById = async (req, res) => {
+  const payload = {
+    id: req.params.id,
+    author_id: req.userMeta?.id,
+    actor_role: req.userMeta?.role,
+    lang: req.query.lang,
+  };
+  const validatePayload = validator.isValidPayload(payload, queryModel.getMyColumnByIdParamType);
+  if (validatePayload.err) return sendResponse(validatePayload, res);
+  const result = await queryHandler.getMyColumnById(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 const getPendingColumns = async (req, res) => {
   const payload = {
     page: req.query.page,
@@ -251,6 +264,7 @@ module.exports = {
   getColumns,
   createColumn,
   getMyColumns,
+  getMyColumnById,
   getPendingColumns,
   getSavedColumns,
   getColumnById,
