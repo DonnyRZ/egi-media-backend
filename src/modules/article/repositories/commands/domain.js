@@ -30,7 +30,7 @@ const ALLOWED_TRANSITIONS = {
   review: ["published", "draft"],
   scheduled: ["published", "draft"],
   published: ["archived"],
-  archived: [],
+  archived: ["draft", "published"],
 };
 
 class ArticleCommandDomain {
@@ -230,12 +230,12 @@ class ArticleCommandDomain {
       return wrapper.error(new ForbiddenError("You are not allowed to change this article's status"));
     }
 
-    // Author hanya boleh submit review atau kembali ke draft. Publish, schedule,
-    // dan archive adalah kewenangan superadmin.
+    // Author hanya boleh submit review atau kembali ke draft (termasuk unarchive
+    // ke draft). Publish, schedule, archive, dan republish = superadmin.
     const AUTHOR_ALLOWED_STATUS = ["review", "draft"];
     if (actor_role !== "superadmin" && !AUTHOR_ALLOWED_STATUS.includes(status)) {
       return wrapper.error(
-        new ForbiddenError("Only superadmin can publish, schedule, or archive articles")
+        new ForbiddenError("Only superadmin can publish, schedule, archive, or republish articles")
       );
     }
 
