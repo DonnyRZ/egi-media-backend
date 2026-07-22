@@ -12,6 +12,7 @@ const verifyEmail = async (payload) => domain.verifyEmail(payload);
 const forgotPassword = async (payload) => domain.forgotPassword(payload);
 const resetPassword = async (payload) => domain.resetPassword(payload);
 const changePassword = async (payload) => domain.changePassword(payload);
+const updateMe = async (payload) => domain.updateMe(payload);
 const googleLogin = async (payload) => domain.googleLogin(payload);
 const resendVerification = async (payload) => domain.resendVerification(payload);
 
@@ -24,6 +25,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePassword,
+  updateMe,
   googleLogin,
   resendVerification,
 };

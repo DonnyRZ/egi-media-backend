@@ -248,6 +248,20 @@ const changePassword = async (req, res) => {
   return sendResponse(result, res);
 };
 
+// ─── Update Me ─────────────────────────────────────────────────────────────────
+const updateMe = async (req, res) => {
+  const payload = {
+    user_id: req.userMeta?.id,
+    full_name: req.body.full_name,
+  };
+  const validatePayload = validator.isValidPayload(payload, commandModel.updateMeParamType);
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await commandHandler.updateMe(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 // ─── Google OAuth Callback ─────────────────────────────────────────────────────
 const googleCallback = async (req, res) => {
   // req.user diisi oleh passport via authGoogleCallback middleware
@@ -320,6 +334,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePassword,
+  updateMe,
   googleCallback,
   getMe,
   resendVerification,
