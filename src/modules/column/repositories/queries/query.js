@@ -10,7 +10,7 @@ class Query {
   async findColumnExistsById(id) {
     try {
       const query = `
-        SELECT id, author_id, status
+        SELECT id, author_id, status, title
         FROM "columns"
         WHERE id = $1
           AND deleted_at IS NULL
@@ -88,8 +88,90 @@ class Query {
       c.updated_at,
       u.id AS author_id,
       u.full_name AS author_full_name,
+      u.email AS author_email,
       u.role AS author_role
     `;
+  }
+
+  async findManageColumns({ page, limit, search, status }) {
+    try {
+      const offset = (page - 1) * limit;
+      const conditions = ["c.deleted_at IS NULL"];
+      const values = [];
+      let idx = 1;
+
+      if (status) {
+        conditions.push(`c.status = $${idx}`);
+        values.push(status);
+        idx++;
+      }
+
+      if (search) {
+        conditions.push(`(
+          c.title ILIKE $${idx}
+          OR c.title_en ILIKE $${idx}
+          OR c.title_uz ILIKE $${idx}
+          OR u.full_name ILIKE $${idx}
+        )`);
+        values.push(`%${search}%`);
+        idx++;
+      }
+
+      const query = `
+        SELECT ${this._listSelect()}
+        FROM "columns" c
+        INNER JOIN users u ON u.id = c.author_id
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY
+          CASE WHEN c.status = 'pending_approval' THEN 0 ELSE 1 END,
+          c.created_at DESC
+        LIMIT $${idx} OFFSET $${idx + 1}
+      `;
+      values.push(limit, offset);
+
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(result ? result.rows : []);
+    } catch (error) {
+      logger.error(ctx, "findManageColumns", "Error listing manage columns", error);
+      return wrapper.error(error);
+    }
+  }
+
+  async countManageColumns({ search, status }) {
+    try {
+      const conditions = ["c.deleted_at IS NULL"];
+      const values = [];
+      let idx = 1;
+
+      if (status) {
+        conditions.push(`c.status = $${idx}`);
+        values.push(status);
+        idx++;
+      }
+
+      if (search) {
+        conditions.push(`(
+          c.title ILIKE $${idx}
+          OR c.title_en ILIKE $${idx}
+          OR c.title_uz ILIKE $${idx}
+          OR u.full_name ILIKE $${idx}
+        )`);
+        values.push(`%${search}%`);
+        idx++;
+      }
+
+      const query = `
+        SELECT COUNT(*)::int AS total
+        FROM "columns" c
+        INNER JOIN users u ON u.id = c.author_id
+        WHERE ${conditions.join(" AND ")}
+      `;
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(result?.rows?.[0]?.total || 0);
+    } catch (error) {
+      logger.error(ctx, "countManageColumns", "Error counting manage columns", error);
+      return wrapper.error(error);
+    }
   }
 
   async findAllPublishedColumns({ page, limit, search, author_id, sort }) {

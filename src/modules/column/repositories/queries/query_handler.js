@@ -10,6 +10,7 @@ const getColumnBySlug = async (payload) => domain.getColumnBySlug(payload);
 const getMyColumns = async (payload) => domain.getMyColumns(payload);
 const getMyColumnById = async (payload) => domain.getMyColumnById(payload);
 const getPendingColumns = async (payload) => domain.getPendingColumns(payload);
+const getManageColumns = async (payload) => domain.getManageColumns(payload);
 const getSavedColumns = async (payload) => domain.getSavedColumns(payload);
 const getComments = async (payload) => domain.getComments(payload);
 
@@ -20,6 +21,7 @@ module.exports = {
   getMyColumns,
   getMyColumnById,
   getPendingColumns,
+  getManageColumns,
   getSavedColumns,
   getComments,
 };

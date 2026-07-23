@@ -44,6 +44,14 @@ const getPendingColumnsParamType = joi.object({
   lang: localeParam,
 });
 
+const getManageColumnsParamType = joi.object({
+  page: joi.number().integer().min(1).default(1),
+  limit: joi.number().integer().min(1).max(100).default(20),
+  search: joi.string().optional().allow("", null),
+  status: joi.string().valid(...COLUMN_STATUSES).optional().allow("", null),
+  lang: localeParam,
+});
+
 const getSavedColumnsParamType = joi.object({
   user_id: joi.string().uuid().required(),
   page: joi.number().integer().min(1).default(1),
@@ -64,6 +72,7 @@ module.exports = {
   getMyColumnsParamType,
   getMyColumnByIdParamType,
   getPendingColumnsParamType,
+  getManageColumnsParamType,
   getSavedColumnsParamType,
   getCommentsParamType,
 };
