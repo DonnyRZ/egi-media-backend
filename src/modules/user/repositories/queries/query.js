@@ -42,8 +42,14 @@ class Query {
     }
   }
 
-  // ─── List Users dengan pagination, search, filter role ─────────────────────
-  async findAllUsers({ page, limit, search, role }) {
+  resolveUserSort(sort) {
+    if (sort === "oldest") return "u.created_at ASC, u.full_name ASC, u.id ASC";
+    if (sort === "name") return "u.full_name ASC, u.created_at DESC, u.id ASC";
+    return "u.created_at DESC, u.full_name ASC, u.id ASC";
+  }
+
+  // ─── List Users dengan pagination, search, filter role, sort ───────────────
+  async findAllUsers({ page, limit, search, role, sort }) {
     try {
       const offset = (page - 1) * limit;
       const conditions = ["u.deleted_at IS NULL"];
@@ -63,6 +69,7 @@ class Query {
       }
 
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+      const orderBy = this.resolveUserSort(sort);
 
       const query = `
         SELECT
@@ -77,7 +84,7 @@ class Query {
           u.updated_at
         FROM users u
         ${whereClause}
-        ORDER BY u.created_at DESC
+        ORDER BY ${orderBy}
         LIMIT $${idx} OFFSET $${idx + 1}
       `;
 

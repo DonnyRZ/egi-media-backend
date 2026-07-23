@@ -9,6 +9,11 @@ const getUsersParamType = joi.object({
     .valid("superadmin", "author", "member", "visitor")
     .optional()
     .allow("", null),
+  sort: joi
+    .string()
+    .valid("newest", "oldest", "name")
+    .optional()
+    .default("newest"),
 });
 
 const getUserByIdParamType = joi.object({

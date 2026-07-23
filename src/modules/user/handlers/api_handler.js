@@ -12,6 +12,7 @@ const getUsers = async (req, res) => {
     limit: req.query.limit,
     search: req.query.search,
     role: req.query.role,
+    sort: req.query.sort,
   };
   const validatePayload = validator.isValidPayload(payload, queryModel.getUsersParamType);
   if (validatePayload.err) {

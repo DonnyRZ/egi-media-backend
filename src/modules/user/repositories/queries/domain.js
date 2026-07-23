@@ -11,10 +11,10 @@ class UserQueryDomain {
 
   // ─── List Users dengan pagination ──────────────────────────────────────────
   async getUsers(payload) {
-    const { page, limit, search, role } = payload;
+    const { page, limit, search, role, sort } = payload;
 
     const [usersResult, countResult] = await Promise.all([
-      this.query.findAllUsers({ page, limit, search, role }),
+      this.query.findAllUsers({ page, limit, search, role, sort }),
       this.query.countAllUsers({ search, role }),
     ]);
 
