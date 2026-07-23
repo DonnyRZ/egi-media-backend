@@ -445,11 +445,15 @@ class ArticleCommandDomain {
   async shareArticle(payload) {
     const { id: article_id, user_id, platform } = payload;
 
-    // Cek artikel exists
     const articleExists = await this.query.findArticleExistsById(article_id);
     if (articleExists.err) {
       logger.error(ctx, "shareArticle", "Article not found", { article_id });
       return wrapper.error(new NotFoundError("Article not found"));
+    }
+    if (articleExists.data.status !== "published") {
+      return wrapper.error(
+        new BadRequestError("Only published articles can be shared")
+      );
     }
 
     const shareId = uuidv4();
@@ -479,6 +483,11 @@ class ArticleCommandDomain {
     if (articleExists.err) {
       logger.error(ctx, "recordArticleView", "Article not found", { article_id });
       return wrapper.error(new NotFoundError("Article not found"));
+    }
+    if (articleExists.data.status !== "published") {
+      return wrapper.error(
+        new BadRequestError("Only published articles can be viewed")
+      );
     }
 
     const viewId = uuidv4();
