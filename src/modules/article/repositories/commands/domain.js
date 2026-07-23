@@ -36,6 +36,17 @@ const ALLOWED_TRANSITIONS = {
   archived: ["draft", "published"],
 };
 
+/** Map status transitions to newsroom-readable audit action labels. */
+const resolveStatusAuditAction = (fromStatus, toStatus) => {
+  if (toStatus === "archived") return "ARCHIVED";
+  if (fromStatus === "archived") return "RESTORED";
+  if (toStatus === "published") return "PUBLISHED";
+  if (toStatus === "scheduled") return "SCHEDULED";
+  if (toStatus === "review") return "SUBMITTED_FOR_REVIEW";
+  if (toStatus === "draft") return "REVERTED_TO_DRAFT";
+  return "STATUS_CHANGE";
+};
+
 class ArticleCommandDomain {
   constructor(db) {
     this.db = db;
@@ -123,6 +134,7 @@ class ArticleCommandDomain {
       record_id: id,
       action: "CREATE",
       new_data: {
+        article_title: title,
         title,
         status: status || "draft",
         category_id: category_id || null,
@@ -219,11 +231,13 @@ class ArticleCommandDomain {
       record_id: id,
       action: "UPDATE",
       old_data: {
+        article_title: article.title,
         title: article.title,
         status: article.status,
         category_id: article.category_id,
       },
       new_data: {
+        article_title: title ?? article.title,
         title: title ?? article.title,
         status: nextStatus,
         category_id: nextCategoryId ?? null,
@@ -261,8 +275,17 @@ class ArticleCommandDomain {
       user_id: actor_id,
       record_id: id,
       action: "UPDATE",
-      old_data: { title: article.title, status: article.status },
-      new_data: { title: article.title, status: article.status, placements },
+      old_data: {
+        article_title: article.title,
+        title: article.title,
+        status: article.status,
+      },
+      new_data: {
+        article_title: article.title,
+        title: article.title,
+        status: article.status,
+        placements,
+      },
       ip_address,
       user_agent,
     });
@@ -298,11 +321,17 @@ class ArticleCommandDomain {
     await this.writeAudit({
       user_id: actor_id,
       record_id: id,
-      action: "DELETE",
+      action: "TRASHED",
       old_data: {
+        article_title: article.title,
         title: article.title,
         status: article.status,
         category_id: article.category_id,
+      },
+      new_data: {
+        article_title: article.title,
+        title: article.title,
+        status: "trashed",
       },
       ip_address,
       user_agent,
@@ -372,25 +401,36 @@ class ArticleCommandDomain {
       return wrapper.error(result.err);
     }
 
+    const auditAction = resolveStatusAuditAction(article.status, status);
+
     await this.writeAudit({
       user_id: actor_id,
       record_id: id,
-      action: "STATUS_CHANGE",
+      action: auditAction,
       old_data: {
+        article_title: article.title,
         title: article.title,
         status: article.status,
+        from_status: article.status,
         published_at: article.published_at,
       },
       new_data: {
+        article_title: article.title,
         title: article.title,
         status,
+        from_status: article.status,
+        to_status: status,
         published_at: finalPublishedAt,
       },
       ip_address,
       user_agent,
     });
 
-    logger.info(ctx, "changeStatus", "Article status changed", { id, status });
+    logger.info(ctx, "changeStatus", "Article status changed", {
+      id,
+      status,
+      auditAction,
+    });
     return wrapper.data(result.data);
   }
 
