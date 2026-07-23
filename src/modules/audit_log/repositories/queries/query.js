@@ -10,7 +10,8 @@ class AuditLogQuery {
 
     const rowsQuery = `
       SELECT al.id, al.user_id, al.table_name, al.record_id, al.action,
-             al.old_data, al.new_data, al.ip_address, al.user_agent, al.created_at,
+             al.old_data, al.new_data, al.ip_address, al.user_agent,
+             al.article_title, al.created_at,
              u.full_name AS user_full_name
       FROM ${collection} al
       LEFT JOIN users u ON u.id = al.user_id
@@ -51,7 +52,8 @@ class AuditLogQuery {
 
   async findOneById(id) {
     return this.db.executeQuery(
-      `SELECT id, user_id, table_name, record_id, action, old_data, new_data, ip_address, user_agent, created_at
+      `SELECT id, user_id, table_name, record_id, action, old_data, new_data,
+              ip_address, user_agent, article_title, created_at
        FROM ${collection}
        WHERE id = $1
        LIMIT 1;`,

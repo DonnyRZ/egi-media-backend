@@ -62,8 +62,9 @@ class ArticleCommandDomain {
     new_data = null,
     ip_address = null,
     user_agent = null,
+    article_title = null,
   }) {
-    await insertAuditLog(this.db, {
+    const result = await insertAuditLog(this.db, {
       user_id,
       table_name: "articles",
       record_id,
@@ -72,7 +73,19 @@ class ArticleCommandDomain {
       new_data,
       ip_address,
       user_agent,
+      article_title,
     });
+
+    if (result.err) {
+      logger.error(ctx, "writeAudit", "Audit log write failed", {
+        action,
+        record_id,
+        user_id,
+        error: result.err?.message || result.err,
+      });
+    }
+
+    return result;
   }
 
   requireCategoryForStatus(status, categoryId) {
@@ -133,6 +146,7 @@ class ArticleCommandDomain {
       user_id: author_id,
       record_id: id,
       action: "CREATE",
+      article_title: title,
       new_data: {
         article_title: title,
         title,
@@ -230,6 +244,7 @@ class ArticleCommandDomain {
       user_id: actor_id,
       record_id: id,
       action: "UPDATE",
+      article_title: title ?? article.title,
       old_data: {
         article_title: article.title,
         title: article.title,
@@ -275,6 +290,7 @@ class ArticleCommandDomain {
       user_id: actor_id,
       record_id: id,
       action: "UPDATE",
+      article_title: article.title,
       old_data: {
         article_title: article.title,
         title: article.title,
@@ -322,6 +338,7 @@ class ArticleCommandDomain {
       user_id: actor_id,
       record_id: id,
       action: "TRASHED",
+      article_title: article.title,
       old_data: {
         article_title: article.title,
         title: article.title,
@@ -407,6 +424,7 @@ class ArticleCommandDomain {
       user_id: actor_id,
       record_id: id,
       action: auditAction,
+      article_title: article.title,
       old_data: {
         article_title: article.title,
         title: article.title,
