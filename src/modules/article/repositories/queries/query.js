@@ -513,7 +513,11 @@ class Query {
         INNER JOIN users u ON u.id = a.author_id
         LEFT JOIN categories c ON c.id = a.category_id
         ${whereClause}
-        ORDER BY a.created_at DESC
+        ${
+          status === "published"
+            ? "ORDER BY a.published_at DESC NULLS LAST, a.created_at DESC"
+            : "ORDER BY a.created_at DESC"
+        }
         LIMIT $${idx} OFFSET $${idx + 1}
       `;
 
@@ -618,7 +622,11 @@ class Query {
         INNER JOIN users u ON u.id = a.author_id
         LEFT JOIN categories c ON c.id = a.category_id
         ${whereClause}
-        ORDER BY a.updated_at DESC NULLS LAST, a.created_at DESC
+        ${
+          status === "published"
+            ? "ORDER BY a.published_at DESC NULLS LAST, a.created_at DESC"
+            : "ORDER BY a.updated_at DESC NULLS LAST, a.created_at DESC"
+        }
         LIMIT $${idx} OFFSET $${idx + 1}
       `;
 

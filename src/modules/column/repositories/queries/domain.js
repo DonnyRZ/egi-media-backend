@@ -1,6 +1,7 @@
 const Query = require("./query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const { decrypt } = require("../../../../helpers/utils/crypto_helper");
 const {
   NotFoundError,
   ForbiddenError,
@@ -9,6 +10,11 @@ const ctx = "Column-Query-Domain";
 
 const DEFAULT_LOCALE = "id";
 const TRANSLATION_LOCALES = ["en", "uz"];
+
+const resolveAuthorEmail = (value) => {
+  if (!value || typeof value !== "string") return null;
+  return decrypt(value) || value;
+};
 
 const getAvailableLocales = (row) => {
   const locales = [DEFAULT_LOCALE];
@@ -51,6 +57,7 @@ class ColumnQueryDomain {
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
+        email: resolveAuthorEmail(row.author_email),
         role: row.author_role || null,
       },
     };
@@ -104,7 +111,7 @@ class ColumnQueryDomain {
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
-        email: row.author_email || null,
+        email: resolveAuthorEmail(row.author_email),
         role: row.author_role || null,
       },
     };
@@ -217,6 +224,31 @@ class ColumnQueryDomain {
       return wrapper.error(columnsResult.err);
     }
     if (countResult.err) {
+      return wrapper.error(countResult.err);
+    }
+
+    const total = countResult.data;
+    return wrapper.data({
+      items: columnsResult.data.map((row) => this.mapListItem(row, requestedLocale)),
+      meta: { total, page, limit, total_pages: Math.ceil(total / limit) },
+    });
+  }
+
+  async getManageColumns(payload) {
+    const { page, limit, search, status, lang } = payload;
+    const requestedLocale = lang || DEFAULT_LOCALE;
+
+    const [columnsResult, countResult] = await Promise.all([
+      this.query.findManageColumns({ page, limit, search, status }),
+      this.query.countManageColumns({ search, status }),
+    ]);
+
+    if (columnsResult.err) {
+      logger.error(ctx, "getManageColumns", "Failed to fetch columns", columnsResult.err);
+      return wrapper.error(columnsResult.err);
+    }
+    if (countResult.err) {
+      logger.error(ctx, "getManageColumns", "Failed to count columns", countResult.err);
       return wrapper.error(countResult.err);
     }
 

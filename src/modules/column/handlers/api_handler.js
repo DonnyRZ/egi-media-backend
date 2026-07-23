@@ -6,6 +6,18 @@ const validator = require("../../../helpers/utils/validator");
 const { sendResponse } = require("../../../helpers/utils/response");
 const { SUCCESS } = require("../../../helpers/http-status/status_code");
 
+const requestAuditMeta = (req) => {
+  const forwarded = req.headers["x-forwarded-for"];
+  const rawIp = Array.isArray(forwarded)
+    ? forwarded[0]
+    : forwarded || req.socket?.remoteAddress || null;
+
+  return {
+    ip_address: rawIp,
+    user_agent: req.headers["user-agent"] || null,
+  };
+};
+
 const getColumns = async (req, res) => {
   const payload = {
     page: req.query.page,
@@ -73,6 +85,20 @@ const getPendingColumns = async (req, res) => {
   const validatePayload = validator.isValidPayload(payload, queryModel.getPendingColumnsParamType);
   if (validatePayload.err) return sendResponse(validatePayload, res);
   const result = await queryHandler.getPendingColumns(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+const getManageColumns = async (req, res) => {
+  const payload = {
+    page: req.query.page,
+    limit: req.query.limit,
+    search: req.query.search,
+    status: req.query.status,
+    lang: req.query.lang,
+  };
+  const validatePayload = validator.isValidPayload(payload, queryModel.getManageColumnsParamType);
+  if (validatePayload.err) return sendResponse(validatePayload, res);
+  const result = await queryHandler.getManageColumns(validatePayload.data);
   return sendResponse(result, res);
 };
 
@@ -157,6 +183,7 @@ const approveColumn = async (req, res) => {
     id: req.params.id,
     actor_id: req.userMeta?.id,
     actor_role: req.userMeta?.role,
+    ...requestAuditMeta(req),
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.approveColumnParamType);
   if (validatePayload.err) return sendResponse(validatePayload, res);
@@ -170,6 +197,7 @@ const rejectColumn = async (req, res) => {
     actor_id: req.userMeta?.id,
     actor_role: req.userMeta?.role,
     rejection_reason: req.body.rejection_reason,
+    ...requestAuditMeta(req),
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.rejectColumnParamType);
   if (validatePayload.err) return sendResponse(validatePayload, res);
@@ -266,6 +294,7 @@ module.exports = {
   getMyColumns,
   getMyColumnById,
   getPendingColumns,
+  getManageColumns,
   getSavedColumns,
   getColumnById,
   getColumnBySlug,

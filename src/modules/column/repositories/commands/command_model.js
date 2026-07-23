@@ -64,6 +64,8 @@ const approveColumnParamType = joi.object({
   id: joi.string().uuid().required(),
   actor_id: joi.string().uuid().required(),
   actor_role: joi.string().required(),
+  ip_address: joi.string().optional().allow(null, ""),
+  user_agent: joi.string().optional().allow(null, ""),
 });
 
 const rejectColumnParamType = joi.object({
@@ -71,6 +73,8 @@ const rejectColumnParamType = joi.object({
   actor_id: joi.string().uuid().required(),
   actor_role: joi.string().required(),
   rejection_reason: joi.string().trim().min(3).max(1000).required(),
+  ip_address: joi.string().optional().allow(null, ""),
+  user_agent: joi.string().optional().allow(null, ""),
 });
 
 const saveColumnParamType = joi.object({

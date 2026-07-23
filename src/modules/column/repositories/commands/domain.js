@@ -25,8 +25,42 @@ const EDITABLE_STATUSES = ["draft", "pending_approval", "rejected"];
 
 class ColumnCommandDomain {
   constructor(db) {
+    this.db = db;
     this.command = new Command(db);
     this.query = new Query(db);
+  }
+
+  async writeAudit({
+    user_id,
+    record_id,
+    action,
+    old_data = null,
+    new_data = null,
+    ip_address = null,
+    user_agent = null,
+    article_title = null,
+  }) {
+    const { insertAuditLog } = require("../../../../helpers/utils/audit_log");
+    const result = await insertAuditLog(this.db, {
+      user_id,
+      table_name: "columns",
+      record_id,
+      action,
+      old_data,
+      new_data,
+      ip_address,
+      user_agent,
+      article_title,
+    });
+    if (result.err) {
+      logger.error(ctx, "writeAudit", "Audit log write failed", {
+        action,
+        record_id,
+        user_id,
+        error: result.err?.message || result.err,
+      });
+    }
+    return result;
   }
 
   _buildTranslationValues(translations) {
@@ -189,7 +223,7 @@ class ColumnCommandDomain {
   }
 
   async approveColumn(payload) {
-    const { id, actor_id, actor_role } = payload;
+    const { id, actor_id, actor_role, ip_address, user_agent } = payload;
 
     if (actor_role !== "superadmin") {
       return wrapper.error(new ForbiddenError("Only superadmin can approve columns"));
@@ -200,9 +234,10 @@ class ColumnCommandDomain {
       return wrapper.error(new NotFoundError("Column not found"));
     }
 
-    if (columnExists.data.status !== "pending_approval") {
+    const column = columnExists.data;
+    if (column.status !== "pending_approval") {
       return wrapper.error(
-        new BadRequestError(`Cannot approve column with status '${columnExists.data.status}'`)
+        new BadRequestError(`Cannot approve column with status '${column.status}'`)
       );
     }
 
@@ -218,12 +253,23 @@ class ColumnCommandDomain {
       return wrapper.error(result.err);
     }
 
+    await this.writeAudit({
+      user_id: actor_id,
+      record_id: id,
+      action: "PUBLISHED",
+      article_title: column.title,
+      old_data: { status: column.status, article_title: column.title },
+      new_data: { status: "published", article_title: column.title },
+      ip_address,
+      user_agent,
+    });
+
     logger.info(ctx, "approveColumn", "Column approved", { id });
     return wrapper.data(result.data);
   }
 
   async rejectColumn(payload) {
-    const { id, actor_id, actor_role, rejection_reason } = payload;
+    const { id, actor_id, actor_role, rejection_reason, ip_address, user_agent } = payload;
 
     if (actor_role !== "superadmin") {
       return wrapper.error(new ForbiddenError("Only superadmin can reject columns"));
@@ -234,9 +280,10 @@ class ColumnCommandDomain {
       return wrapper.error(new NotFoundError("Column not found"));
     }
 
-    if (columnExists.data.status !== "pending_approval") {
+    const column = columnExists.data;
+    if (column.status !== "pending_approval") {
       return wrapper.error(
-        new BadRequestError(`Cannot reject column with status '${columnExists.data.status}'`)
+        new BadRequestError(`Cannot reject column with status '${column.status}'`)
       );
     }
 
@@ -251,6 +298,21 @@ class ColumnCommandDomain {
     if (result.err) {
       return wrapper.error(result.err);
     }
+
+    await this.writeAudit({
+      user_id: actor_id,
+      record_id: id,
+      action: "REJECTED",
+      article_title: column.title,
+      old_data: { status: column.status, article_title: column.title },
+      new_data: {
+        status: "rejected",
+        rejection_reason,
+        article_title: column.title,
+      },
+      ip_address,
+      user_agent,
+    });
 
     logger.info(ctx, "rejectColumn", "Column rejected", { id });
     return wrapper.data(result.data);

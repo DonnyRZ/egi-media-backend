@@ -23,6 +23,12 @@ module.exports = (server) => {
     verifyRoleName(["superadmin"]),
     columnHandler.getPendingColumns
   );
+  server.get(
+    "/api/v1/columns/manage",
+    verifyToken,
+    verifyRoleName(["superadmin"]),
+    columnHandler.getManageColumns
+  );
   server.get("/api/v1/columns/saved", verifyToken, columnHandler.getSavedColumns);
 
   // Detail

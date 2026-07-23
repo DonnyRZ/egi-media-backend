@@ -6,10 +6,17 @@ const validator = require("../../../helpers/utils/validator");
 const { sendResponse } = require("../../../helpers/utils/response");
 const { SUCCESS } = require("../../../helpers/http-status/status_code");
 
-const requestAuditMeta = (req) => ({
-  ip_address: req.headers["x-forwarded-for"] || req.socket?.remoteAddress || null,
-  user_agent: req.headers["user-agent"] || null,
-});
+const requestAuditMeta = (req) => {
+  const forwarded = req.headers["x-forwarded-for"];
+  const rawIp = Array.isArray(forwarded)
+    ? forwarded[0]
+    : forwarded || req.socket?.remoteAddress || null;
+
+  return {
+    ip_address: rawIp,
+    user_agent: req.headers["user-agent"] || null,
+  };
+};
 
 // ─── GET /api/v1/articles ──────────────────────────────────────────────────────
 const getArticles = async (req, res) => {
