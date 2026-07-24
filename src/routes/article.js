@@ -12,6 +12,12 @@ module.exports = (server) => {
   // ─── Authenticated list routes (before /:id) ────────────────────────────────
   server.get("/api/v1/articles/me", verifyToken, articleHandler.getMyArticles);
   server.get("/api/v1/articles/saved", verifyToken, articleHandler.getSavedArticles);
+  // Any authenticated user (visitor/member/author/superadmin). Guests → 401 via verifyToken.
+  server.get(
+    "/api/v1/articles/personalized",
+    verifyToken,
+    articleHandler.getPersonalizedArticles
+  );
 
   // Editorial CMS: seluruh artikel (semua author & status) untuk author/superadmin.
   server.get(

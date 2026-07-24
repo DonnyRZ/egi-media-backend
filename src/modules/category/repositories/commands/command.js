@@ -94,7 +94,13 @@ class CategoryCommand {
 
   async deleteOne(id) {
     return this.db.executeQuery(
-      `DELETE FROM ${collection}
+      `WITH clear_soft_deleted AS (
+         UPDATE articles
+         SET category_id = NULL
+         WHERE category_id = $1
+           AND deleted_at IS NOT NULL
+       )
+       DELETE FROM ${collection}
        WHERE id = $1
        RETURNING ${RETURNING_COLUMNS};`,
       [id]

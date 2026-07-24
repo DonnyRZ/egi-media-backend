@@ -62,6 +62,14 @@ const getSavedArticlesParamType = joi.object({
   lang: localeParam,
 });
 
+// ─── Personalized Articles (subscribed topics) ────────────────────────────────
+const getPersonalizedArticlesParamType = joi.object({
+  user_id: joi.string().uuid().required(),
+  page: joi.number().integer().min(1).default(1),
+  limit: joi.number().integer().min(1).max(100).default(20),
+  lang: localeParam,
+});
+
 // ─── Get Manage Articles (editorial: semua author & status) ───────────────────
 const getManageArticlesParamType = joi.object({
   page: joi.number().integer().min(1).default(1),
@@ -90,6 +98,7 @@ module.exports = {
   getArticleBySlugParamType,
   getMyArticlesParamType,
   getSavedArticlesParamType,
+  getPersonalizedArticlesParamType,
   getManageArticlesParamType,
   getArticleStatsParamType,
 };

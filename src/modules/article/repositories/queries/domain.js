@@ -382,6 +382,51 @@ class ArticleQueryDomain {
       meta: { total, page, limit, total_pages },
     });
   }
+
+  // ─── Personalized feed from subscribed topics ───────────────────────────────
+  async getPersonalizedArticles(payload) {
+    const { user_id, page, limit, lang } = payload;
+    const requestedLocale = lang || DEFAULT_LOCALE;
+
+    const [articlesResult, countResult] = await Promise.all([
+      this.query.findPersonalizedArticles({ user_id, page, limit }),
+      this.query.countPersonalizedArticles(user_id),
+    ]);
+
+    if (articlesResult.err) {
+      logger.error(
+        ctx,
+        "getPersonalizedArticles",
+        "Failed to fetch personalized articles",
+        articlesResult.err
+      );
+      return wrapper.error(articlesResult.err);
+    }
+
+    if (countResult.err) {
+      logger.error(
+        ctx,
+        "getPersonalizedArticles",
+        "Failed to count personalized articles",
+        countResult.err
+      );
+      return wrapper.error(countResult.err);
+    }
+
+    const total = countResult.data;
+    const total_pages = Math.ceil(total / limit);
+    const items = articlesResult.data.map((row) => this.mapListItem(row, requestedLocale));
+
+    logger.info(ctx, "getPersonalizedArticles", "Fetched personalized articles", {
+      user_id,
+      total,
+    });
+
+    return wrapper.data({
+      items,
+      meta: { total, page, limit, total_pages },
+    });
+  }
 }
 
 module.exports = ArticleQueryDomain;

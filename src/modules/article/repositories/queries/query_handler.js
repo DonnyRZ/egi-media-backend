@@ -9,6 +9,7 @@ const getArticleById = async (payload) => domain.getArticleById(payload);
 const getArticleBySlug = async (payload) => domain.getArticleBySlug(payload);
 const getMyArticles = async (payload) => domain.getMyArticles(payload);
 const getSavedArticles = async (payload) => domain.getSavedArticles(payload);
+const getPersonalizedArticles = async (payload) => domain.getPersonalizedArticles(payload);
 const getManageArticles = async (payload) => domain.getManageArticles(payload);
 const getArticleStats = async (payload) => domain.getArticleStats(payload);
 
@@ -18,6 +19,7 @@ module.exports = {
   getArticleBySlug,
   getMyArticles,
   getSavedArticles,
+  getPersonalizedArticles,
   getManageArticles,
   getArticleStats,
 };

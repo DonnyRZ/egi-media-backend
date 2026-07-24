@@ -36,13 +36,14 @@ const config = {
   },
   redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
   mailConfig: {
-    host: process.env.MAIL_HOST,
-    port: process.env.MAIL_PORT,
-    secure: process.env.MAIL_SECURE,
-    from: process.env.MAIL_FROM,
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  }
+    // Prefer SMTP_* aliases; keep MAIL_* for backward compatibility.
+    host: process.env.SMTP_HOST || process.env.MAIL_HOST,
+    port: process.env.SMTP_PORT || process.env.MAIL_PORT,
+    secure: process.env.SMTP_SECURE || process.env.MAIL_SECURE,
+    from: process.env.SMTP_FROM || process.env.MAIL_FROM,
+    user: process.env.SMTP_USER || process.env.MAIL_USER,
+    pass: process.env.SMTP_PASS || process.env.MAIL_PASS,
+  },
 };
 
 const store = new confidence.Store(config);

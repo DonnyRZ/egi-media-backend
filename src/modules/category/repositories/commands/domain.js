@@ -140,12 +140,26 @@ class CategoryCommandDomain {
       return wrapper.error(new NotFoundError("Category not found"));
     }
 
+    const children = await this.query.hasChildTopics(id);
+    if (!children) {
+      return wrapper.error(new InternalServerError("Unable to validate category children"));
+    }
+    if (children.rows[0].exists) {
+      return wrapper.error(
+        new BadRequestError(
+          "Cannot delete Category because it contains child items. Please delete or reassign them first."
+        )
+      );
+    }
+
     const reference = await this.query.hasArticleReference(id);
     if (!reference) {
       return wrapper.error(new InternalServerError("Unable to validate category references"));
     }
     if (reference.rows[0].exists) {
-      return wrapper.error(new ConflictError("Category is still used by articles"));
+      return wrapper.error(
+        new BadRequestError("Cannot delete because this item is still used by existing articles.")
+      );
     }
 
     const result = await this.command.deleteOne(id);

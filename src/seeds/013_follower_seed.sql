@@ -18,7 +18,8 @@ VALUES
   )
 ON CONFLICT (author_id, follower_id) DO NOTHING;
 
-INSERT INTO topic_followers (topic_id, user_id, created_at)
+-- Topic subscriptions (renamed from topic_followers in migration 017)
+INSERT INTO user_topic_subscriptions (topic_id, user_id, created_at)
 VALUES
   (
     '00000000-0000-4000-8000-000000000011',

@@ -1,5 +1,5 @@
 -- Bulk relationship data seed
--- Adds at least 20 rows each for author_followers, topic_followers, user_subscriptions,
+-- Adds at least 20 rows each for author_followers, user_topic_subscriptions, user_subscriptions,
 -- newsletter_articles, newsletter_subscribers, notifications, and audit_logs.
 -- Depends on 017-019 seeds and the existing users:
 --   superadmin (000000000099), author (000000000109), members (000000000111/112/113).
@@ -21,8 +21,8 @@ CROSS JOIN seed_users f
 WHERE a.id <> f.id
 ON CONFLICT DO NOTHING;
 
--- Topic followers (20 rows) - each seeded topic followed by a rotating member user
-INSERT INTO topic_followers (topic_id, user_id, created_at)
+-- Topic subscriptions (20 rows) - each seeded topic followed by a rotating member user
+INSERT INTO user_topic_subscriptions (topic_id, user_id, created_at)
 SELECT
   ('00000000-0000-4000-8000-' || lpad((901000000000 + g)::text, 12, '0'))::uuid,
   ('00000000-0000-4000-8000-0000000001' || lpad((11 + (g % 3))::text, 2, '0'))::uuid,

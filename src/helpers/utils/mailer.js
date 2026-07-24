@@ -13,13 +13,17 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-async function sendMail({ to, subject, html }) {
-    return transporter.sendMail({
+async function sendMail({ to, subject, html, bcc }) {
+    const payload = {
         from: mailConfig.from,
         to,
         subject,
         html,
-    });
+    };
+    if (bcc) {
+        payload.bcc = bcc;
+    }
+    return transporter.sendMail(payload);
 }
 
 module.exports = {

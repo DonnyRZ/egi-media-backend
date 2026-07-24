@@ -143,6 +143,25 @@ const getSavedArticles = async (req, res) => {
   return sendResponse(result, res);
 };
 
+// ─── GET /api/v1/articles/personalized ────────────────────────────────────────
+const getPersonalizedArticles = async (req, res) => {
+  const payload = {
+    user_id: req.userMeta?.id,
+    page: req.query.page,
+    limit: req.query.limit,
+    lang: req.query.lang,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    queryModel.getPersonalizedArticlesParamType
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getPersonalizedArticles(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 // ─── GET /api/v1/articles/:id ─────────────────────────────────────────────────
 const getArticleById = async (req, res) => {
   const payload = {
@@ -326,6 +345,7 @@ module.exports = {
   getArticleStats,
   getManageArticles,
   getSavedArticles,
+  getPersonalizedArticles,
   getArticleById,
   getArticleBySlug,
   updateArticle,

@@ -11,7 +11,8 @@ class Query {
   async findArticleExistsById(id) {
     try {
       const query = `
-        SELECT id, author_id, status, published_at, category_id, title
+        SELECT id, author_id, status, published_at, category_id,
+               title, slug, summary, featured_image
         FROM articles
         WHERE id = $1
           AND deleted_at IS NULL
@@ -842,6 +843,85 @@ class Query {
       return wrapper.data(result.rows[0]?.total || 0);
     } catch (error) {
       logger.error(ctx, "countSavedArticles", "Error counting saved articles", error);
+      return wrapper.error(error);
+    }
+  }
+
+  // ─── Personalized feed (subscribed topics) ──────────────────────────────────
+  async findPersonalizedArticles({ user_id, page, limit }) {
+    try {
+      const offset = (page - 1) * limit;
+
+      const query = `
+        SELECT
+          a.id,
+          a.title,
+          a.slug,
+          a.summary,
+          a.title_en,
+          a.slug_en,
+          a.summary_en,
+          a.title_uz,
+          a.slug_uz,
+          a.summary_uz,
+          a.featured_image,
+          a.status,
+          a.placements,
+          a.published_at,
+          a.created_at,
+          a.updated_at,
+          u.id AS author_id,
+          u.full_name AS author_full_name,
+          c.id AS category_id,
+          c.name AS category_name,
+          c.name_en AS category_name_en,
+          c.name_uz AS category_name_uz
+        FROM articles a
+        INNER JOIN users u ON u.id = a.author_id
+        LEFT JOIN categories c ON c.id = a.category_id
+        WHERE a.deleted_at IS NULL
+          AND a.status = 'published'
+          AND EXISTS (
+            SELECT 1
+            FROM article_topics at2
+            INNER JOIN user_topic_subscriptions uts
+              ON uts.topic_id = at2.topic_id
+            WHERE at2.article_id = a.id
+              AND uts.user_id = $1
+          )
+        ORDER BY a.published_at DESC NULLS LAST
+        LIMIT $2 OFFSET $3
+      `;
+
+      const result = await this.db.executeQuery(query, [user_id, limit, offset]);
+      return wrapper.data(result.rows);
+    } catch (error) {
+      logger.error(ctx, "findPersonalizedArticles", "Error querying personalized articles", error);
+      return wrapper.error(error);
+    }
+  }
+
+  async countPersonalizedArticles(user_id) {
+    try {
+      const query = `
+        SELECT COUNT(*)::int AS total
+        FROM articles a
+        WHERE a.deleted_at IS NULL
+          AND a.status = 'published'
+          AND EXISTS (
+            SELECT 1
+            FROM article_topics at2
+            INNER JOIN user_topic_subscriptions uts
+              ON uts.topic_id = at2.topic_id
+            WHERE at2.article_id = a.id
+              AND uts.user_id = $1
+          )
+      `;
+
+      const result = await this.db.executeQuery(query, [user_id]);
+      return wrapper.data(result.rows[0]?.total || 0);
+    } catch (error) {
+      logger.error(ctx, "countPersonalizedArticles", "Error counting personalized articles", error);
       return wrapper.error(error);
     }
   }

@@ -37,7 +37,11 @@ class TagCommandDomain {
     if (current.rows.length === 0) return wrapper.error(new NotFoundError("Tag not found"));
     const reference = await this.query.hasArticleReference(id);
     if (!reference) return wrapper.error(new InternalServerError("Unable to validate tag references"));
-    if (reference.rows[0].exists) return wrapper.error(new ConflictError("Tag is still used by articles"));
+    if (reference.rows[0].exists) {
+      return wrapper.error(
+        new BadRequestError("Cannot delete because this item is still used by existing articles.")
+      );
+    }
     const result = await this.command.deleteOne(id);
     if (!result) return wrapper.error(new InternalServerError("Unable to delete tag"));
     return wrapper.data(result.rows[0]);

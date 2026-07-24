@@ -20,6 +20,7 @@ const seriesPayload = {
   description: joi.string().trim().allow("", null).optional(),
   // Shared across locales — one image for id/en/uz.
   image: joi.string().uri().optional().allow(null, ""),
+  topic_id: joi.string().uuid().required(),
 };
 
 const createSeriesParamType = joi.object({

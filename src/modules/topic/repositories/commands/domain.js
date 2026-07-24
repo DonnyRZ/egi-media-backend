@@ -49,6 +49,14 @@ class TopicCommandDomain {
       return wrapper.error(new ConflictError("Topic name already exists"));
     }
 
+    const category = await this.query.findCategoryById(payload.category_id);
+    if (!category) {
+      return wrapper.error(new InternalServerError("Unable to validate category"));
+    }
+    if (category.rows.length === 0) {
+      return wrapper.error(new NotFoundError("Category not found"));
+    }
+
     const { translationValues } = buildTranslationValues(payload.translations);
     for (const loc of TRANSLATION_LOCALES) {
       if (payload.translations?.[loc]?.name && !translationValues[`slug_${loc}`]) {
@@ -64,6 +72,7 @@ class TopicCommandDomain {
       name: payload.name,
       slug,
       description: payload.description || null,
+      category_id: payload.category_id,
       created_at: now,
       updated_at: now,
       name_en: translationValues.name_en ?? null,
@@ -86,6 +95,14 @@ class TopicCommandDomain {
     }
     if (current.rows.length === 0) {
       return wrapper.error(new NotFoundError("Topic not found"));
+    }
+
+    const category = await this.query.findCategoryById(payload.category_id);
+    if (!category) {
+      return wrapper.error(new InternalServerError("Unable to validate category"));
+    }
+    if (category.rows.length === 0) {
+      return wrapper.error(new NotFoundError("Category not found"));
     }
 
     const slug = toSlug(payload.name);
@@ -120,6 +137,7 @@ class TopicCommandDomain {
       name: payload.name,
       slug,
       description: payload.description || null,
+      category_id: payload.category_id,
       updated_at: new Date(),
       translationValues,
       updatedTranslationFields,
@@ -138,12 +156,27 @@ class TopicCommandDomain {
     if (current.rows.length === 0) {
       return wrapper.error(new NotFoundError("Topic not found"));
     }
+
+    const children = await this.query.hasChildSeries(id);
+    if (!children) {
+      return wrapper.error(new InternalServerError("Unable to validate topic children"));
+    }
+    if (children.rows[0].exists) {
+      return wrapper.error(
+        new BadRequestError(
+          "Cannot delete Topic because it contains child items. Please delete or reassign them first."
+        )
+      );
+    }
+
     const reference = await this.query.hasArticleReference(id);
     if (!reference) {
       return wrapper.error(new InternalServerError("Unable to validate topic references"));
     }
     if (reference.rows[0].exists) {
-      return wrapper.error(new ConflictError("Topic is still used by articles"));
+      return wrapper.error(
+        new BadRequestError("Cannot delete because this item is still used by existing articles.")
+      );
     }
 
     const result = await this.command.deleteOne(id);
