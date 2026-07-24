@@ -15,6 +15,7 @@ const updateTranslationEntry = joi
 const topicPayload = {
   name: joi.string().trim().min(1).max(100).required(),
   description: joi.string().trim().allow("", null).optional(),
+  category_id: joi.string().uuid().required(),
   translations: joi
     .object({
       en: createTranslationEntry.optional(),

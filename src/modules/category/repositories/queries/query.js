@@ -75,6 +75,16 @@ class CategoryQuery {
       [id]
     );
   }
+
+  async hasChildTopics(id) {
+    return this.db.executeQuery(
+      `SELECT EXISTS (
+         SELECT 1 FROM topics
+         WHERE category_id = $1
+       ) AS exists;`,
+      [id]
+    );
+  }
 }
 
 module.exports = CategoryQuery;

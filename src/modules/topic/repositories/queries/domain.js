@@ -37,6 +37,22 @@ class TopicQueryDomain {
       name: pickLocalized(row, "name", locale),
       slug: pickLocalized(row, "slug", locale),
       description: pickLocalized(row, "description", locale) || null,
+      category_id: row.category_id || null,
+      category: row.category_id
+        ? {
+            id: row.category_id,
+            name: pickLocalized(
+              {
+                name: row.category_name,
+                name_en: row.category_name_en,
+                name_uz: row.category_name_uz,
+              },
+              "name",
+              requestedLocale
+            ),
+            slug: row.category_slug || null,
+          }
+        : null,
       article_count: row.article_count ?? 0,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -72,6 +88,22 @@ class TopicQueryDomain {
       name: pickLocalized(row, "name", locale),
       slug: pickLocalized(row, "slug", locale),
       description: pickLocalized(row, "description", locale) || null,
+      category_id: row.category_id || null,
+      category: row.category_id
+        ? {
+            id: row.category_id,
+            name: pickLocalized(
+              {
+                name: row.category_name,
+                name_en: row.category_name_en,
+                name_uz: row.category_name_uz,
+              },
+              "name",
+              requestedLocale
+            ),
+            slug: row.category_slug || null,
+          }
+        : null,
       translations,
       created_at: row.created_at,
       updated_at: row.updated_at,

@@ -10,7 +10,7 @@ const TRANSLATION_COLUMNS = [
 ];
 
 const RETURNING_COLUMNS = `
-  id, name, slug, description, image,
+  id, name, slug, description, image, topic_id, author_id,
   name_en, slug_en, description_en,
   name_uz, slug_uz, description_uz,
   created_at
@@ -27,6 +27,7 @@ class SeriesCommand {
     slug,
     description,
     image,
+    topic_id,
     author_id,
     created_at,
     name_en,
@@ -38,11 +39,11 @@ class SeriesCommand {
   }) {
     return this.db.executeQuery(
       `INSERT INTO ${collection} (
-         id, name, slug, description, image, author_id, created_at,
+         id, name, slug, description, image, topic_id, author_id, created_at,
          name_en, slug_en, description_en,
          name_uz, slug_uz, description_uz
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING ${RETURNING_COLUMNS};`,
       [
         id,
@@ -50,6 +51,7 @@ class SeriesCommand {
         slug,
         description,
         image ?? null,
+        topic_id,
         author_id,
         created_at,
         name_en ?? null,
@@ -68,12 +70,19 @@ class SeriesCommand {
     slug,
     description,
     image,
+    topic_id,
     translationValues,
     updatedTranslationFields,
   }) {
-    const setClauses = ["name = $1", "slug = $2", "description = $3", "image = $4"];
-    const values = [name, slug, description, image ?? null];
-    let idx = 5;
+    const setClauses = [
+      "name = $1",
+      "slug = $2",
+      "description = $3",
+      "image = $4",
+      "topic_id = $5",
+    ];
+    const values = [name, slug, description, image ?? null, topic_id];
+    let idx = 6;
 
     for (const col of TRANSLATION_COLUMNS) {
       if (updatedTranslationFields.includes(col)) {
@@ -96,7 +105,13 @@ class SeriesCommand {
 
   async deleteOne(id) {
     return this.db.executeQuery(
-      `DELETE FROM ${collection}
+      `WITH clear_soft_deleted AS (
+         UPDATE articles
+         SET series_id = NULL
+         WHERE series_id = $1
+           AND deleted_at IS NOT NULL
+       )
+       DELETE FROM ${collection}
        WHERE id = $1
        RETURNING ${RETURNING_COLUMNS};`,
       [id]

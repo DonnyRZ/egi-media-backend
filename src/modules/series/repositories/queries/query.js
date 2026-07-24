@@ -1,9 +1,13 @@
 const collection = "series";
 
 const SELECT_COLUMNS = `
-  id, name, slug, description, image, author_id, created_at,
-  name_en, slug_en, description_en,
-  name_uz, slug_uz, description_uz
+  s.id, s.name, s.slug, s.description, s.image, s.topic_id, s.author_id, s.created_at,
+  s.name_en, s.slug_en, s.description_en,
+  s.name_uz, s.slug_uz, s.description_uz,
+  t.name AS topic_name,
+  t.name_en AS topic_name_en,
+  t.name_uz AS topic_name_uz,
+  t.slug AS topic_slug
 `;
 
 class SeriesQuery {
@@ -16,29 +20,34 @@ class SeriesQuery {
     const searchValue = search ? `%${search}%` : null;
     const rowsQuery = `
       SELECT
-        id, name, slug, description, image, created_at,
-        name_en, slug_en, description_en,
-        name_uz, slug_uz, description_uz,
+        s.id, s.name, s.slug, s.description, s.image, s.topic_id, s.created_at,
+        s.name_en, s.slug_en, s.description_en,
+        s.name_uz, s.slug_uz, s.description_uz,
+        t.name AS topic_name,
+        t.name_en AS topic_name_en,
+        t.name_uz AS topic_name_uz,
+        t.slug AS topic_slug,
         (SELECT COUNT(*)::int FROM articles a
-         WHERE a.series_id = ${collection}.id AND a.deleted_at IS NULL) AS article_count
-      FROM ${collection}
+         WHERE a.series_id = s.id AND a.deleted_at IS NULL) AS article_count
+      FROM ${collection} s
+      LEFT JOIN topics t ON t.id = s.topic_id
       WHERE (
         $1::text IS NULL
-        OR name ILIKE $1 OR slug ILIKE $1 OR description ILIKE $1
-        OR name_en ILIKE $1 OR slug_en ILIKE $1 OR description_en ILIKE $1
-        OR name_uz ILIKE $1 OR slug_uz ILIKE $1 OR description_uz ILIKE $1
+        OR s.name ILIKE $1 OR s.slug ILIKE $1 OR s.description ILIKE $1
+        OR s.name_en ILIKE $1 OR s.slug_en ILIKE $1 OR s.description_en ILIKE $1
+        OR s.name_uz ILIKE $1 OR s.slug_uz ILIKE $1 OR s.description_uz ILIKE $1
       )
-      ORDER BY name ASC, id ASC
+      ORDER BY s.name ASC, s.id ASC
       LIMIT $2 OFFSET $3;
     `;
     const countQuery = `
       SELECT COUNT(*)::int AS total
-      FROM ${collection}
+      FROM ${collection} s
       WHERE (
         $1::text IS NULL
-        OR name ILIKE $1 OR slug ILIKE $1 OR description ILIKE $1
-        OR name_en ILIKE $1 OR slug_en ILIKE $1 OR description_en ILIKE $1
-        OR name_uz ILIKE $1 OR slug_uz ILIKE $1 OR description_uz ILIKE $1
+        OR s.name ILIKE $1 OR s.slug ILIKE $1 OR s.description ILIKE $1
+        OR s.name_en ILIKE $1 OR s.slug_en ILIKE $1 OR s.description_en ILIKE $1
+        OR s.name_uz ILIKE $1 OR s.slug_uz ILIKE $1 OR s.description_uz ILIKE $1
       );
     `;
 
@@ -53,8 +62,9 @@ class SeriesQuery {
   async findOneById(id) {
     return this.db.executeQuery(
       `SELECT ${SELECT_COLUMNS}
-       FROM ${collection}
-       WHERE id = $1
+       FROM ${collection} s
+       LEFT JOIN topics t ON t.id = s.topic_id
+       WHERE s.id = $1
        LIMIT 1;`,
       [id]
     );
@@ -63,10 +73,18 @@ class SeriesQuery {
   async findOneBySlug(slug) {
     return this.db.executeQuery(
       `SELECT ${SELECT_COLUMNS}
-       FROM ${collection}
-       WHERE slug = $1 OR slug_en = $1 OR slug_uz = $1
+       FROM ${collection} s
+       LEFT JOIN topics t ON t.id = s.topic_id
+       WHERE s.slug = $1 OR s.slug_en = $1 OR s.slug_uz = $1
        LIMIT 1;`,
       [slug]
+    );
+  }
+
+  async findTopicById(id) {
+    return this.db.executeQuery(
+      `SELECT id, name, slug FROM topics WHERE id = $1 LIMIT 1;`,
+      [id]
     );
   }
 

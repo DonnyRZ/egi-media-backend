@@ -10,6 +10,7 @@ const {
   BadRequestError,
   ForbiddenError,
 } = require("../../../../helpers/errors");
+const { notifyTopicSubscribersOnPublish } = require("../../../../helpers/utils/topicPublishNotifier");
 const ctx = "Article-Command-Domain";
 
 // ─── Helper: generate slug dari title ────────────────────────────────────────
@@ -158,6 +159,15 @@ class ArticleCommandDomain {
     });
 
     logger.info(ctx, "createArticle", "Article created successfully", { id });
+
+    if ((status || "draft") === "published") {
+      void notifyTopicSubscribersOnPublish({
+        db: this.db,
+        article: articleResult.data,
+        topicIds: topic_ids || [],
+      });
+    }
+
     return wrapper.data(articleResult.data);
   }
 
@@ -262,6 +272,15 @@ class ArticleCommandDomain {
     });
 
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });
+
+    if (article.status !== "published" && nextStatus === "published") {
+      void notifyTopicSubscribersOnPublish({
+        db: this.db,
+        article: updateResult.data,
+        topicIds: topic_ids,
+      });
+    }
+
     return wrapper.data(updateResult.data);
   }
 
@@ -449,6 +468,20 @@ class ArticleCommandDomain {
       status,
       auditAction,
     });
+
+    if (article.status !== "published" && status === "published") {
+      void notifyTopicSubscribersOnPublish({
+        db: this.db,
+        article: {
+          id: article.id,
+          title: article.title,
+          slug: article.slug,
+          summary: article.summary,
+          featured_image: article.featured_image,
+        },
+      });
+    }
+
     return wrapper.data(result.data);
   }
 

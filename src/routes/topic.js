@@ -8,6 +8,7 @@ module.exports = (server) => {
   server.post("/api/v1/topics", verifyToken, verifyRoleName(["superadmin"]), topicHandler.createTopic);
   server.put("/api/v1/topics/:id", verifyToken, verifyRoleName(["superadmin"]), topicHandler.updateTopic);
   server.delete("/api/v1/topics/:id", verifyToken, verifyRoleName(["superadmin"]), topicHandler.deleteTopic);
+  // Legacy follow aliases — same store as /users/me/topics
   server.post("/api/v1/topics/:id/follow", verifyToken, topicHandler.followTopic);
   server.delete("/api/v1/topics/:id/follow", verifyToken, topicHandler.unfollowTopic);
 };

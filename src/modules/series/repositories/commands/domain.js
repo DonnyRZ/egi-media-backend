@@ -56,6 +56,14 @@ class SeriesCommandDomain {
       return wrapper.error(new ConflictError("Series name already exists"));
     }
 
+    const topic = await this.query.findTopicById(payload.topic_id);
+    if (!topic) {
+      return wrapper.error(new InternalServerError("Unable to validate topic"));
+    }
+    if (topic.rows.length === 0) {
+      return wrapper.error(new NotFoundError("Topic not found"));
+    }
+
     const { translationValues } = buildTranslationValues(payload.translations);
 
     // Reject translated names that cannot produce a slug.
@@ -73,6 +81,7 @@ class SeriesCommandDomain {
       slug,
       description: payload.description || null,
       image: payload.image || null,
+      topic_id: payload.topic_id,
       author_id: payload.author_id,
       created_at: new Date(),
       name_en: translationValues.name_en ?? null,
@@ -98,6 +107,14 @@ class SeriesCommandDomain {
     }
     if (payload.actor_role !== "superadmin" && current.rows[0].author_id !== payload.actor_id) {
       return wrapper.error(new ForbiddenError("You are not allowed to update this series"));
+    }
+
+    const topic = await this.query.findTopicById(payload.topic_id);
+    if (!topic) {
+      return wrapper.error(new InternalServerError("Unable to validate topic"));
+    }
+    if (topic.rows.length === 0) {
+      return wrapper.error(new NotFoundError("Topic not found"));
     }
 
     const slug = toSlug(payload.name);
@@ -134,6 +151,7 @@ class SeriesCommandDomain {
       slug,
       description: payload.description || null,
       image: payload.image || null,
+      topic_id: payload.topic_id,
       translationValues,
       updatedTranslationFields,
     });
@@ -157,7 +175,9 @@ class SeriesCommandDomain {
       return wrapper.error(new InternalServerError("Unable to validate series references"));
     }
     if (reference.rows[0].exists) {
-      return wrapper.error(new ConflictError("Series is still used by articles"));
+      return wrapper.error(
+        new BadRequestError("Cannot delete because this item is still used by existing articles.")
+      );
     }
 
     const result = await this.command.deleteOne(id);

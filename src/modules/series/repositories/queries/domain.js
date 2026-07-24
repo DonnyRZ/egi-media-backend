@@ -57,6 +57,22 @@ class SeriesQueryDomain {
       slug: pickLocalized(row, "slug", locale),
       description: pickLocalized(row, "description", locale) || null,
       image: row.image || null,
+      topic_id: row.topic_id || null,
+      topic: row.topic_id
+        ? {
+            id: row.topic_id,
+            name: pickLocalized(
+              {
+                name: row.topic_name,
+                name_en: row.topic_name_en,
+                name_uz: row.topic_name_uz,
+              },
+              "name",
+              requestedLocale
+            ),
+            slug: row.topic_slug || null,
+          }
+        : null,
       article_count: row.article_count ?? 0,
       created_at: row.created_at,
     };
@@ -93,6 +109,22 @@ class SeriesQueryDomain {
       description: pickLocalized(row, "description", locale) || null,
       // Shared across locales — not part of translations.
       image: row.image || null,
+      topic_id: row.topic_id || null,
+      topic: row.topic_id
+        ? {
+            id: row.topic_id,
+            name: pickLocalized(
+              {
+                name: row.topic_name,
+                name_en: row.topic_name_en,
+                name_uz: row.topic_name_uz,
+              },
+              "name",
+              requestedLocale
+            ),
+            slug: row.topic_slug || null,
+          }
+        : null,
       translations,
       created_at: row.created_at,
       articles: (articles || []).map(toArticleListItem),

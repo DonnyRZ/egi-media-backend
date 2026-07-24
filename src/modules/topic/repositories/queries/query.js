@@ -1,10 +1,14 @@
 const collection = "topics";
 
 const SELECT_COLUMNS = `
-  id, name, slug, description,
-  name_en, slug_en, description_en,
-  name_uz, slug_uz, description_uz,
-  created_at, updated_at
+  t.id, t.name, t.slug, t.description, t.category_id,
+  t.name_en, t.slug_en, t.description_en,
+  t.name_uz, t.slug_uz, t.description_uz,
+  t.created_at, t.updated_at,
+  c.name AS category_name,
+  c.name_en AS category_name_en,
+  c.name_uz AS category_name_uz,
+  c.slug AS category_slug
 `;
 
 class TopicQuery {
@@ -19,25 +23,26 @@ class TopicQuery {
       SELECT ${SELECT_COLUMNS},
         (SELECT COUNT(*)::int FROM article_topics at2
          JOIN articles a ON a.id = at2.article_id
-         WHERE at2.topic_id = ${collection}.id AND a.deleted_at IS NULL) AS article_count
-      FROM ${collection}
+         WHERE at2.topic_id = t.id AND a.deleted_at IS NULL) AS article_count
+      FROM ${collection} t
+      LEFT JOIN categories c ON c.id = t.category_id
       WHERE (
         $1::text IS NULL
-        OR name ILIKE $1 OR slug ILIKE $1 OR description ILIKE $1
-        OR name_en ILIKE $1 OR slug_en ILIKE $1 OR description_en ILIKE $1
-        OR name_uz ILIKE $1 OR slug_uz ILIKE $1 OR description_uz ILIKE $1
+        OR t.name ILIKE $1 OR t.slug ILIKE $1 OR t.description ILIKE $1
+        OR t.name_en ILIKE $1 OR t.slug_en ILIKE $1 OR t.description_en ILIKE $1
+        OR t.name_uz ILIKE $1 OR t.slug_uz ILIKE $1 OR t.description_uz ILIKE $1
       )
-      ORDER BY name ASC, id ASC
+      ORDER BY t.name ASC, t.id ASC
       LIMIT $2 OFFSET $3;
     `;
     const countQuery = `
       SELECT COUNT(*)::int AS total
-      FROM ${collection}
+      FROM ${collection} t
       WHERE (
         $1::text IS NULL
-        OR name ILIKE $1 OR slug ILIKE $1 OR description ILIKE $1
-        OR name_en ILIKE $1 OR slug_en ILIKE $1 OR description_en ILIKE $1
-        OR name_uz ILIKE $1 OR slug_uz ILIKE $1 OR description_uz ILIKE $1
+        OR t.name ILIKE $1 OR t.slug ILIKE $1 OR t.description ILIKE $1
+        OR t.name_en ILIKE $1 OR t.slug_en ILIKE $1 OR t.description_en ILIKE $1
+        OR t.name_uz ILIKE $1 OR t.slug_uz ILIKE $1 OR t.description_uz ILIKE $1
       );
     `;
     const [rows, count] = await Promise.all([
@@ -49,7 +54,11 @@ class TopicQuery {
 
   async findOneById(id) {
     return this.db.executeQuery(
-      `SELECT ${SELECT_COLUMNS} FROM ${collection} WHERE id = $1 LIMIT 1;`,
+      `SELECT ${SELECT_COLUMNS}
+       FROM ${collection} t
+       LEFT JOIN categories c ON c.id = t.category_id
+       WHERE t.id = $1
+       LIMIT 1;`,
       [id]
     );
   }
@@ -57,10 +66,18 @@ class TopicQuery {
   async findOneBySlug(slug) {
     return this.db.executeQuery(
       `SELECT ${SELECT_COLUMNS}
-       FROM ${collection}
-       WHERE slug = $1 OR slug_en = $1 OR slug_uz = $1
+       FROM ${collection} t
+       LEFT JOIN categories c ON c.id = t.category_id
+       WHERE t.slug = $1 OR t.slug_en = $1 OR t.slug_uz = $1
        LIMIT 1;`,
       [slug]
+    );
+  }
+
+  async findCategoryById(id) {
+    return this.db.executeQuery(
+      `SELECT id, name, slug FROM categories WHERE id = $1 LIMIT 1;`,
+      [id]
     );
   }
 
@@ -77,9 +94,22 @@ class TopicQuery {
     );
   }
 
+  async hasChildSeries(id) {
+    return this.db.executeQuery(
+      `SELECT EXISTS (
+         SELECT 1 FROM series
+         WHERE topic_id = $1
+       ) AS exists;`,
+      [id]
+    );
+  }
+
   async findFollower({ topic_id, user_id }) {
     return this.db.executeQuery(
-      "SELECT topic_id, user_id, created_at FROM topic_followers WHERE topic_id = $1 AND user_id = $2 LIMIT 1;",
+      `SELECT topic_id, user_id, created_at
+       FROM user_topic_subscriptions
+       WHERE topic_id = $1 AND user_id = $2
+       LIMIT 1;`,
       [topic_id, user_id]
     );
   }

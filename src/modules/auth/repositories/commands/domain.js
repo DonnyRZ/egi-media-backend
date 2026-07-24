@@ -141,20 +141,26 @@ class Auth {
       return wrapper.error(new UnauthorizedError("Invalid email or password"));
     }
 
+    // Legacy accounts may remain visitor after verify; promote once email is confirmed.
+    let role = user.role;
+    const loginUpdates = { last_login_at: new Date(), updated_at: new Date() };
+    if (role === "visitor") {
+      role = "member";
+      loginUpdates.role = "member";
+    }
+    await this.command.updateUser({ id: user.id }, loginUpdates);
+
     const tokenPayload = {
       id: user.id,
       email: user.email,
       full_name: user.full_name,
-      role: user.role,
+      role,
     };
 
     const accessToken = await jwtHelper.generateAccessToken(tokenPayload);
     const refreshToken = await jwtHelper.generateRefreshToken({ id: user.id });
 
-    // Update last_login_at
-    await this.command.updateUser({ id: user.id }, { last_login_at: new Date() });
-
-    logger.info(ctx, "login", "User logged in successfully", { userId: user.id });
+    logger.info(ctx, "login", "User logged in successfully", { userId: user.id, role });
 
     return wrapper.data({
       access_token: accessToken,
@@ -182,17 +188,26 @@ class Auth {
 
     const user = userResult.data;
 
+    let role = user.role;
+    if (role === "visitor" && user.email_verified_at) {
+      role = "member";
+      await this.command.updateUser(
+        { id: user.id },
+        { role: "member", updated_at: new Date() }
+      );
+    }
+
     const tokenPayload = {
       id: user.id,
       email: user.email,
       full_name: user.full_name,
-      role: user.role,
+      role,
     };
 
     const newAccessToken = await jwtHelper.generateAccessToken(tokenPayload);
     const newRefreshToken = await jwtHelper.generateRefreshToken({ id: user.id });
 
-    logger.info(ctx, "refreshToken", "Tokens refreshed", { userId: user.id });
+    logger.info(ctx, "refreshToken", "Tokens refreshed", { userId: user.id, role });
 
     return wrapper.data({
       access_token: newAccessToken,
@@ -230,14 +245,21 @@ class Auth {
       return wrapper.error(new BadRequestError("Verification token has expired"));
     }
 
-    await this.command.updateUser(
-      { id: tokenData.user_id },
-      { email_verified_at: now, updated_at: now }
-    );
+    // Promote verified visitors to member so member-facing features work after login.
+    const userResult = await this.query.findUserById(tokenData.user_id);
+    const nextFields = { email_verified_at: now, updated_at: now };
+    if (!userResult.err && userResult.data?.role === "visitor") {
+      nextFields.role = "member";
+    }
+
+    await this.command.updateUser({ id: tokenData.user_id }, nextFields);
 
     await this.command.markTokenUsed({ id: tokenData.id }, { used_at: now });
 
-    logger.info(ctx, "verifyEmail", "Email verified", { userId: tokenData.user_id });
+    logger.info(ctx, "verifyEmail", "Email verified", {
+      userId: tokenData.user_id,
+      role: nextFields.role || userResult.data?.role,
+    });
 
     return wrapper.data({ message: "Email verified successfully" });
   }
@@ -411,7 +433,8 @@ class Auth {
         email,
         password_hash: null,
         full_name: name,
-        role: "visitor",
+        // Google email is already verified → treat as member immediately.
+        role: "member",
         login_provider: "google",
         email_verified_at: now,
         last_login_at: now,
@@ -427,12 +450,13 @@ class Auth {
 
       logger.info(ctx, "googleLogin", "New user created via Google OAuth", { userId, email });
     } else {
-      // User sudah ada — update last_login_at
+      // User sudah ada — update last_login_at (and promote verified visitors).
       userId = existingUser.data.id;
-      await this.command.updateUser(
-        { id: userId },
-        { last_login_at: now, updated_at: now }
-      );
+      const nextFields = { last_login_at: now, updated_at: now };
+      if (existingUser.data.role === "visitor") {
+        nextFields.role = "member";
+      }
+      await this.command.updateUser({ id: userId }, nextFields);
       logger.info(ctx, "googleLogin", "Existing user logged in via Google OAuth", { userId });
     }
 
