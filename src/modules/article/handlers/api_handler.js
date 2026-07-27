@@ -18,6 +18,28 @@ const requestAuditMeta = (req) => {
   };
 };
 
+/**
+ * Articles belong to exactly one topic.
+ * Prefer topic_id; legacy topic_ids arrays are reduced to the first id.
+ */
+const resolveTopicIdsPayload = (body) => {
+  if (!body || typeof body !== "object") return undefined;
+
+  if (Object.prototype.hasOwnProperty.call(body, "topic_id")) {
+    const topicId = body.topic_id;
+    if (topicId === null || topicId === "") return [];
+    return topicId ? [topicId] : [];
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, "topic_ids")) {
+    const topicIds = body.topic_ids;
+    if (!Array.isArray(topicIds) || topicIds.length === 0) return [];
+    return [topicIds[0]];
+  }
+
+  return undefined;
+};
+
 // ─── GET /api/v1/articles ──────────────────────────────────────────────────────
 const getArticles = async (req, res) => {
   const payload = {
@@ -54,7 +76,7 @@ const createArticle = async (req, res) => {
     translations: req.body.translations,
     status: req.body.status,
     published_at: req.body.published_at,
-    topic_ids: req.body.topic_ids,
+    topic_ids: resolveTopicIdsPayload(req.body) ?? [],
     tag_ids: req.body.tag_ids,
     placements: req.body.placements,
   };
@@ -220,7 +242,7 @@ const updateArticle = async (req, res) => {
     translations: req.body.translations,
     status: req.body.status,
     published_at: req.body.published_at,
-    topic_ids: req.body.topic_ids,
+    topic_ids: resolveTopicIdsPayload(req.body),
     tag_ids: req.body.tag_ids,
     placements: req.body.placements,
   };

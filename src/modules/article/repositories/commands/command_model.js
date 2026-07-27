@@ -52,7 +52,8 @@ const createArticleParamType = joi.object({
     .valid("draft", "review", "scheduled", "published", "archived")
     .default("draft"),
   published_at: joi.date().iso().optional().allow(null),
-  topic_ids: joi.array().items(joi.string().uuid()).optional().default([]),
+  // Exactly one topic (or none). Arrays longer than 1 are rejected.
+  topic_ids: joi.array().items(joi.string().uuid()).max(1).optional().default([]),
   tag_ids: joi.array().items(joi.string().uuid()).optional().default([]),
   placements: placementsSchema.default(["latest_news"]),
 });
@@ -79,7 +80,7 @@ const updateArticleParamType = joi.object({
     .valid("draft", "review", "scheduled", "published", "archived")
     .optional(),
   published_at: joi.date().iso().optional().allow(null),
-  topic_ids: joi.array().items(joi.string().uuid()).optional(),
+  topic_ids: joi.array().items(joi.string().uuid()).max(1).optional(),
   tag_ids: joi.array().items(joi.string().uuid()).optional(),
   placements: placementsSchema.optional(),
 });

@@ -5,6 +5,23 @@ const listAuditLogsParamType = joi.object({
   limit: joi.number().integer().min(1).max(100).default(20),
   user_id: joi.string().uuid().optional().allow("", null),
   table_name: joi.string().trim().optional().allow("", null),
+  resource_type: joi
+    .string()
+    .trim()
+    .valid(
+      "Article",
+      "Column",
+      "Video",
+      "Category",
+      "Topic",
+      "Series",
+      "Tag",
+      "User",
+      "Newsletter",
+      "Unknown",
+    )
+    .optional()
+    .allow("", null),
   search: joi.string().trim().max(100).optional().allow("", null),
   action: joi
     .string()
@@ -21,6 +38,7 @@ const listAuditLogsParamType = joi.object({
       "SCHEDULED",
       "SUBMITTED_FOR_REVIEW",
       "REVERTED_TO_DRAFT",
+      "REJECTED",
     )
     .optional()
     .allow("", null),

@@ -40,22 +40,41 @@ const addEmailJob = async (data, opts = {}) => {
   const redisReady = connection?.status === "ready";
 
   if (!redisReady) {
+    console.warn("[EmailQueue] Redis unavailable, sending email directly", {
+      status: connection?.status,
+      to: data?.to,
+    });
     logger.error(ctx, "addEmailJob", "Redis unavailable, sending email directly", {
       status: connection?.status,
     });
-    await withTimeout(sendMail(data), QUEUE_ADD_TIMEOUT_MS, "Direct SMTP send timed out");
+    try {
+      await withTimeout(sendMail(data), QUEUE_ADD_TIMEOUT_MS, "Direct SMTP send timed out");
+      console.log("[EmailQueue] Direct SMTP send completed", { to: data?.to });
+    } catch (error) {
+      console.error("Email Send Error:", error);
+      throw error;
+    }
     return null;
   }
 
   try {
-    return await withTimeout(
+    const job = await withTimeout(
       emailQueue.add("send-email", data, opts),
       QUEUE_ADD_TIMEOUT_MS,
       "Email queue add timed out",
     );
+    console.log("[EmailQueue] Job queued", { to: data?.to, jobId: job?.id });
+    return job;
   } catch (error) {
+    console.error("[EmailQueue] Queue unavailable, falling back to direct SMTP", error);
     logger.error(ctx, "addEmailJob", "Queue unavailable, sending email directly", error);
-    await withTimeout(sendMail(data), QUEUE_ADD_TIMEOUT_MS, "Direct SMTP send timed out");
+    try {
+      await withTimeout(sendMail(data), QUEUE_ADD_TIMEOUT_MS, "Direct SMTP send timed out");
+      console.log("[EmailQueue] Direct SMTP fallback completed", { to: data?.to });
+    } catch (sendError) {
+      console.error("Email Send Error:", sendError);
+      throw sendError;
+    }
     return null;
   }
 };
