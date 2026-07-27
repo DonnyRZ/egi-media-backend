@@ -68,6 +68,7 @@ class ArticleCommandDomain {
     const result = await insertAuditLog(this.db, {
       user_id,
       table_name: "articles",
+      resource_type: "Article",
       record_id,
       action,
       old_data,
@@ -161,6 +162,10 @@ class ArticleCommandDomain {
     logger.info(ctx, "createArticle", "Article created successfully", { id });
 
     if ((status || "draft") === "published") {
+      console.log("[ArticlePublish] createArticle published — triggering topic emails", {
+        articleId: id,
+        topicIds: topic_ids || [],
+      });
       void notifyTopicSubscribersOnPublish({
         db: this.db,
         article: articleResult.data,
@@ -274,6 +279,10 @@ class ArticleCommandDomain {
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });
 
     if (article.status !== "published" && nextStatus === "published") {
+      console.log("[ArticlePublish] updateArticle published — triggering topic emails", {
+        articleId: id,
+        topicIds: topic_ids ?? null,
+      });
       void notifyTopicSubscribersOnPublish({
         db: this.db,
         article: updateResult.data,
@@ -470,6 +479,9 @@ class ArticleCommandDomain {
     });
 
     if (article.status !== "published" && status === "published") {
+      console.log("[ArticlePublish] changeStatus published — triggering topic emails", {
+        articleId: id,
+      });
       void notifyTopicSubscribersOnPublish({
         db: this.db,
         article: {

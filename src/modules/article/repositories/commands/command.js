@@ -78,7 +78,10 @@ class Command {
       const queries = [{ query, values }];
 
       if (topic_ids.length > 0) {
-        queries.push(buildRelationInsert("article_topics", "topic_id", id, topic_ids));
+        // Hierarchy rule: one article ↔ one topic.
+        queries.push(
+          buildRelationInsert("article_topics", "topic_id", id, topic_ids.slice(0, 1))
+        );
       }
       if (tag_ids.length > 0) {
         queries.push(buildRelationInsert("article_tags", "tag_id", id, tag_ids));
@@ -186,7 +189,9 @@ class Command {
           values: [id],
         });
         if (topic_ids.length > 0) {
-          queries.push(buildRelationInsert("article_topics", "topic_id", id, topic_ids));
+          queries.push(
+            buildRelationInsert("article_topics", "topic_id", id, topic_ids.slice(0, 1))
+          );
         }
       }
       if (tag_ids !== undefined) {

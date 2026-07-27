@@ -44,6 +44,7 @@ class ColumnCommandDomain {
     const result = await insertAuditLog(this.db, {
       user_id,
       table_name: "columns",
+      resource_type: "Column",
       record_id,
       action,
       old_data,

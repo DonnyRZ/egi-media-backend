@@ -14,11 +14,17 @@ const start = () => {
     "email",
     async (job) => {
       const { to, subject, html } = job.data;
+      console.log("[EmailWorker] Processing job", { jobId: job.id, to, subject });
       logger.info(ctx, `Processing job ${job.id}`, `Sending email to ${to}`);
 
-      await sendMail({ to, subject, html });
-
-      logger.info(ctx, `Job ${job.id} completed`, `Email sent to ${to}`);
+      try {
+        await sendMail({ to, subject, html });
+        console.log("[EmailWorker] Job completed", { jobId: job.id, to });
+        logger.info(ctx, `Job ${job.id} completed`, `Email sent to ${to}`);
+      } catch (error) {
+        console.error("Email Send Error:", error);
+        throw error;
+      }
     },
     {
       connection: getConnection(),
