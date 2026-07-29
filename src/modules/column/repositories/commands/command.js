@@ -263,14 +263,20 @@ class Command {
     }
   }
 
-  async insertComment({ id, column_id, user_id, content }) {
+  async insertComment({ id, column_id, user_id, content, parent_id = null }) {
     try {
       const query = `
-        INSERT INTO column_comments (id, column_id, user_id, content, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, NOW(), NOW())
-        RETURNING id, column_id, user_id, content, created_at, updated_at
+        INSERT INTO column_comments (id, column_id, user_id, content, parent_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        RETURNING id, column_id, user_id, content, parent_id, created_at, updated_at
       `;
-      const result = await this.db.executeQuery(query, [id, column_id, user_id, content]);
+      const result = await this.db.executeQuery(query, [
+        id,
+        column_id,
+        user_id,
+        content,
+        parent_id || null,
+      ]);
       if (!result || result.rowCount === 0) {
         return wrapper.error(new InternalServerError("Unable to create comment"));
       }
@@ -284,9 +290,20 @@ class Command {
   async softDeleteComment(comment_id) {
     try {
       const query = `
+        WITH RECURSIVE comment_tree AS (
+          SELECT id
+          FROM column_comments
+          WHERE id = $1
+            AND deleted_at IS NULL
+          UNION ALL
+          SELECT c.id
+          FROM column_comments c
+          INNER JOIN comment_tree t ON c.parent_id = t.id
+          WHERE c.deleted_at IS NULL
+        )
         UPDATE column_comments
         SET deleted_at = NOW(), updated_at = NOW()
-        WHERE id = $1
+        WHERE id IN (SELECT id FROM comment_tree)
           AND deleted_at IS NULL
       `;
       const result = await this.db.executeQuery(query, [comment_id]);

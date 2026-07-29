@@ -50,7 +50,7 @@ class Query {
   async findCommentExistsById(comment_id, column_id) {
     try {
       const query = `
-        SELECT id, column_id, user_id
+        SELECT id, column_id, user_id, parent_id
         FROM column_comments
         WHERE id = $1
           AND column_id = $2
@@ -466,6 +466,7 @@ class Query {
         SELECT
           cc.id,
           cc.column_id,
+          cc.parent_id,
           cc.content,
           cc.created_at,
           cc.updated_at,

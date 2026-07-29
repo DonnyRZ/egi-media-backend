@@ -268,6 +268,7 @@ const createComment = async (req, res) => {
     column_id: req.params.id,
     user_id: req.userMeta?.id,
     content: req.body.content,
+    parent_id: req.body.parent_id || null,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.createCommentParamType);
   if (validatePayload.err) return sendResponse(validatePayload, res);

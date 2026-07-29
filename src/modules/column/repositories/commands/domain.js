@@ -413,6 +413,7 @@ class ColumnCommandDomain {
 
   async createComment(payload) {
     const { column_id, user_id, content } = payload;
+    const parent_id = payload.parent_id || null;
 
     const columnExists = await this.query.findColumnExistsById(column_id);
     if (columnExists.err) {
@@ -422,13 +423,26 @@ class ColumnCommandDomain {
       return wrapper.error(new BadRequestError("Only published columns can be commented on"));
     }
 
+    if (parent_id) {
+      const parentExists = await this.query.findCommentExistsById(parent_id, column_id);
+      if (parentExists.err) {
+        return wrapper.error(new BadRequestError("Parent comment not found"));
+      }
+    }
+
     const id = uuidv4();
-    const result = await this.command.insertComment({ id, column_id, user_id, content });
+    const result = await this.command.insertComment({
+      id,
+      column_id,
+      user_id,
+      content,
+      parent_id,
+    });
     if (result.err) {
       return wrapper.error(result.err);
     }
 
-    logger.info(ctx, "createComment", "Comment created", { id, column_id });
+    logger.info(ctx, "createComment", "Comment created", { id, column_id, parent_id });
     return wrapper.data(result.data);
   }
 

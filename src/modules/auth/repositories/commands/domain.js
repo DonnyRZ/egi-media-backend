@@ -26,7 +26,8 @@ class Auth {
 
   // ─── Register ────────────────────────────────────────────────────────────────
   async register(payload) {
-    const { email, password, full_name } = payload;
+    const email = String(payload.email || "").trim().toLowerCase();
+    const { password, full_name } = payload;
 
     const existingUser = await this.query.findUserByEmail(email);
     if (!existingUser.err) {
@@ -114,7 +115,8 @@ class Auth {
 
   // ─── Login ───────────────────────────────────────────────────────────────────
   async login(payload) {
-    const { email, password } = payload;
+    const email = String(payload.email || "").trim().toLowerCase();
+    const password = payload.password;
 
     const userResult = await this.query.findUserByEmail(email);
     if (userResult.err) {
@@ -136,7 +138,10 @@ class Auth {
       );
     }
 
-    const isPasswordValid = await hashHelper.compareHash(password, user.password_hash);
+    const isPasswordValid = await hashHelper.compareHash(
+      String(password ?? ""),
+      String(user.password_hash ?? ""),
+    );
     if (!isPasswordValid) {
       return wrapper.error(new UnauthorizedError("Invalid email or password"));
     }
@@ -166,7 +171,7 @@ class Auth {
       access_token: accessToken,
       refresh_token: refreshToken,
       token_type: "Bearer",
-      expires_in: 300, // 5 menit (sesuai ACCESS_SIGN_OPTIONS)
+      expires_in: jwtHelper.getAccessTokenExpiresInSeconds(),
     });
   }
 
@@ -213,7 +218,7 @@ class Auth {
       access_token: newAccessToken,
       refresh_token: newRefreshToken,
       token_type: "Bearer",
-      expires_in: 300,
+      expires_in: jwtHelper.getAccessTokenExpiresInSeconds(),
     });
   }
 
@@ -266,7 +271,7 @@ class Auth {
 
   // ─── Forgot Password ─────────────────────────────────────────────────────────
   async forgotPassword(payload) {
-    const { email } = payload;
+    const email = String(payload.email || "").trim().toLowerCase();
 
     const userResult = await this.query.findUserByEmail(email);
     // Selalu kembalikan 200 untuk menghindari user enumeration
@@ -418,7 +423,8 @@ class Auth {
 
   // ─── Google Login (OAuth Callback) ──────────────────────────────────────────
   async googleLogin(payload) {
-    const { id: googleId, email, name, picture } = payload;
+    const { id: googleId, name, picture } = payload;
+    const email = String(payload.email || "").trim().toLowerCase();
 
     const now = new Date();
     let userId;
@@ -480,13 +486,13 @@ class Auth {
       access_token: accessToken,
       refresh_token: refreshToken,
       token_type: "Bearer",
-      expires_in: 300,
+      expires_in: jwtHelper.getAccessTokenExpiresInSeconds(),
     });
   }
 
   // ─── Resend Verification ─────────────────────────────────────────────────────
   async resendVerification(payload) {
-    const { email } = payload;
+    const email = String(payload.email || "").trim().toLowerCase();
     const userResult = await this.query.findUserByEmail(email);
     if (userResult.err) {
       return wrapper.error(new NotFoundError("Email is not registered"));

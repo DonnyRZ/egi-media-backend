@@ -1,13 +1,13 @@
 const joi = require("joi");
 
 const registerParamType = joi.object({
-  email: joi.string().email().required(),
+  email: joi.string().trim().lowercase().email().required(),
   password: joi.string().min(8).required(),
   full_name: joi.string().max(150).required(),
 });
 
 const loginParamType = joi.object({
-  email: joi.string().email().required(),
+  email: joi.string().trim().lowercase().email().required(),
   password: joi.string().required(),
 });
 
@@ -27,7 +27,7 @@ const updateMeParamType = joi.object({
 });
 
 const forgotPasswordParamType = joi.object({
-  email: joi.string().email().required(),
+  email: joi.string().trim().lowercase().email().required(),
 });
 
 const resetPasswordParamType = joi.object({
@@ -42,14 +42,14 @@ const verifyEmailParamType = joi.object({
 const googleLoginParamType = joi.object({
   id: joi.string().required(),
   name: joi.string().required(),
-  email: joi.string().email().required(),
+  email: joi.string().trim().lowercase().email().required(),
   picture: joi.string().allow("", null).optional(),
   role_id: joi.string().allow("", null).optional(),
   origin: joi.string().allow("", null).optional(),
 });
 
 const resendVerificationParamType = joi.object({
-  email: joi.string().email().required(),
+  email: joi.string().trim().lowercase().email().required(),
 });
 
 module.exports = {

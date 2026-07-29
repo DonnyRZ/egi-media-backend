@@ -7,7 +7,7 @@ const config = {
   port: process.env.APP_PORT,
   frontendUrl: process.env.FE_URL,
   cors: {
-    origins: process.env.CORS_ORIGINS,
+    origins: process.env.CORS_ORIGINS || process.env.CORS_ORIGIN,
   },
   postgresqlUrl: process.env.POSTGRESQL_URL || "postgresql://postgres:postgres@localhost:5432/sample",
   jwt: {

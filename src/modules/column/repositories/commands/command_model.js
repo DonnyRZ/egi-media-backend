@@ -101,6 +101,7 @@ const createCommentParamType = joi.object({
   column_id: joi.string().uuid().required(),
   user_id: joi.string().uuid().required(),
   content: joi.string().trim().min(1).max(2000).required(),
+  parent_id: joi.string().uuid().optional().allow(null, ""),
 });
 
 const deleteCommentParamType = joi.object({

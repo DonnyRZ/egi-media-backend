@@ -115,22 +115,30 @@ const decrypt = (ciphertext) => {
 
 /**
  * Candidate values used when looking up a user by email across storage formats.
+ * Tries trimmed + lowercased plaintext/ciphertext so mixed-case logins still resolve.
  */
 const emailLookupCandidates = (email) => {
-  const normalized = String(email || "").trim();
-  if (!normalized) return [];
+  const trimmed = String(email || "").trim();
+  if (!trimmed) return [];
 
-  const candidates = [encrypt(normalized), normalized];
+  const variants = Array.from(
+    new Set([trimmed, trimmed.toLowerCase()].filter(Boolean)),
+  );
+  const candidates = [];
 
-  for (const legacyRaw of getLegacyRawKeys()) {
-    try {
-      const legacyKey = crypto.createHash("sha256").update(legacyRaw).digest();
-      const cipher = crypto.createCipheriv(algorithm, legacyKey, DET_IV);
-      candidates.push(
-        cipher.update(normalized, "utf8", "base64") + cipher.final("base64"),
-      );
-    } catch {
-      // ignore invalid legacy key material
+  for (const value of variants) {
+    candidates.push(encrypt(value), value);
+
+    for (const legacyRaw of getLegacyRawKeys()) {
+      try {
+        const legacyKey = crypto.createHash("sha256").update(legacyRaw).digest();
+        const cipher = crypto.createCipheriv(algorithm, legacyKey, DET_IV);
+        candidates.push(
+          cipher.update(value, "utf8", "base64") + cipher.final("base64"),
+        );
+      } catch {
+        // ignore invalid legacy key material
+      }
     }
   }
 
@@ -157,7 +165,11 @@ const encryptDocument = (doc) => {
   const encrypted = { ...doc };
   for (const key of Object.keys(encrypted)) {
     if (isSensitiveKey(key) && typeof encrypted[key] === "string") {
-      encrypted[key] = encrypt(encrypted[key]);
+      const value =
+        key.toLowerCase() === "email"
+          ? encrypted[key].trim().toLowerCase()
+          : encrypted[key];
+      encrypted[key] = encrypt(value);
     }
   }
   return encrypted;

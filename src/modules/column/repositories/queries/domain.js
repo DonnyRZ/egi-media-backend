@@ -312,6 +312,7 @@ class ColumnQueryDomain {
     const items = commentsResult.data.map((row) => ({
       id: row.id,
       column_id: row.column_id,
+      parent_id: row.parent_id || null,
       content: row.content,
       created_at: row.created_at,
       updated_at: row.updated_at,
