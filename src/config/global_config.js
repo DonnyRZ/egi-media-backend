@@ -10,6 +10,7 @@ const config = {
     origins: process.env.CORS_ORIGINS || process.env.CORS_ORIGIN,
   },
   postgresqlUrl: process.env.POSTGRESQL_URL || "postgresql://postgres:postgres@localhost:5432/sample",
+  crawlApiUrl: process.env.CRAWL_API_URL || "http://127.0.0.1:5050",
   jwt: {
     accessSign: process.env.ACCESS_SIGN_OPTIONS,
     refreshSign: process.env.REFRESH_SIGN_OPTIONS,
