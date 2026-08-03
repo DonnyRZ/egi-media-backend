@@ -27,4 +27,32 @@ const getViralIssues = async (req, res) => {
   }
 };
 
-module.exports = { getViralIssues };
+const getCrawledArticles = async (req, res) => {
+  try {
+    const response = await axios.get(
+      `${config.get("/crawlApiUrl")}/api/v1/news-feed/articles`,
+      {
+        params: {
+          page: req.query.page,
+          limit: req.query.limit,
+          source: req.query.source,
+          search: req.query.search,
+        },
+        timeout: 10_000,
+        headers: { Accept: "application/json" },
+      },
+    );
+    return res.status(response.status).send(response.data);
+  } catch (error) {
+    const status = error.response?.status || 503;
+    const message = error.response?.data?.message || "Crawl articles API unavailable";
+    return res.status(status).send({
+      success: false,
+      data: "",
+      message,
+      code: status,
+    });
+  }
+};
+
+module.exports = { getViralIssues, getCrawledArticles };

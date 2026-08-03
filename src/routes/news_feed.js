@@ -9,4 +9,10 @@ module.exports = (server) => {
     verifyRoleName(["author", "superadmin"]),
     newsFeedHandler.getViralIssues,
   );
+  server.get(
+    "/api/v1/news-feed/articles",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    newsFeedHandler.getCrawledArticles,
+  );
 };
