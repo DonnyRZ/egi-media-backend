@@ -11,6 +11,7 @@ const {
   ForbiddenError,
 } = require("../../../../helpers/errors");
 const { notifyTopicSubscribersOnPublish } = require("../../../../helpers/utils/topicPublishNotifier");
+const { translateArticle } = require("../../../../services/aiTranslation");
 const ctx = "Article-Command-Domain";
 
 // ─── Helper: generate slug dari title ────────────────────────────────────────
@@ -100,6 +101,54 @@ class ArticleCommandDomain {
     );
   }
 
+  /**
+   * Auto-fill missing EN/UZ translations from Indonesian title/content via AI.
+   * On AI failure: keep Indonesian-only (do not block save). Errors are logged safely.
+   */
+  async resolveTranslations({ title, content, translations }) {
+    const next = {
+      en: translations?.en ? { ...translations.en } : null,
+      uz: translations?.uz ? { ...translations.uz } : null,
+    };
+
+    const needsAi = TRANSLATION_LOCALES.some((loc) => {
+      const entry = next[loc];
+      return !(entry?.title?.trim() && entry?.content?.trim());
+    });
+
+    if (!needsAi) return next;
+
+    const aiResult = await translateArticle(title, content);
+    if (aiResult.status !== "success") {
+      logger.warn(ctx, "resolveTranslations", "AI translation fallback to Indonesian-only", {
+        status: aiResult.status,
+        requestId: aiResult.meta?.requestId || null,
+        promptId: aiResult.meta?.promptId || null,
+        promptVersion: aiResult.meta?.promptVersion || null,
+      });
+      return next;
+    }
+
+    for (const loc of TRANSLATION_LOCALES) {
+      const existing = next[loc];
+      const generated = aiResult.result?.[loc];
+      if (existing?.title?.trim() && existing?.content?.trim()) continue;
+      if (!generated?.title?.trim() || !generated?.content?.trim()) continue;
+
+      next[loc] = {
+        title: generated.title.trim(),
+        content: generated.content,
+        // AI schema covers title/content only; keep existing summary override if any.
+        summary:
+          existing?.summary !== undefined && existing?.summary !== null
+            ? existing.summary
+            : null,
+      };
+    }
+
+    return next;
+  }
+
   // ─── Create Article ─────────────────────────────────────────────────────────
   async createArticle(payload) {
     const {
@@ -120,10 +169,16 @@ class ArticleCommandDomain {
     const id = uuidv4();
     const slug = generateSlug(title);
 
+    const resolvedTranslations = await this.resolveTranslations({
+      title,
+      content,
+      translations,
+    });
+
     // Bangun kolom terjemahan (en/uz) beserta slug per locale bila disediakan.
     const translationValues = {};
     for (const loc of TRANSLATION_LOCALES) {
-      const entry = translations?.[loc];
+      const entry = resolvedTranslations?.[loc];
       if (!entry) continue;
       translationValues[`title_${loc}`] = entry.title;
       translationValues[`slug_${loc}`] = generateSlug(entry.title);
@@ -218,10 +273,33 @@ class ArticleCommandDomain {
     if (series_id !== undefined) updatedFields.push("series_id");
     if (placements !== undefined) updatedFields.push("placements");
 
+    const effectiveTitle = title !== undefined ? title : article.title;
+    const effectiveContent = content !== undefined ? content : article.content;
+    const contentChanged = title !== undefined || content !== undefined;
+
+    // Auto-translate when ID text changes or requested locales are missing.
+    // Existing explicit translation payload still wins per-locale.
+    let resolvedTranslations = translations || {};
+    const missingLocales = TRANSLATION_LOCALES.some((loc) => {
+      const entry = translations?.[loc];
+      const hasPayload = entry?.title?.trim() && entry?.content?.trim();
+      const hasStored =
+        article[`title_${loc}`]?.trim() && article[`content_${loc}`]?.trim();
+      return !hasPayload && (contentChanged || !hasStored);
+    });
+
+    if (missingLocales && effectiveTitle && effectiveContent) {
+      resolvedTranslations = await this.resolveTranslations({
+        title: effectiveTitle,
+        content: effectiveContent,
+        translations,
+      });
+    }
+
     // Terjemahan opsional (en/uz): patch per field, regenerasi slug bila title diubah.
     const translationValues = {};
     for (const loc of TRANSLATION_LOCALES) {
-      const entry = translations?.[loc];
+      const entry = resolvedTranslations?.[loc];
       if (!entry) continue;
       if (entry.title !== undefined) {
         updatedFields.push(`title_${loc}`, `slug_${loc}`);

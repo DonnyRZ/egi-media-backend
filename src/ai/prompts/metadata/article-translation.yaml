@@ -1,0 +1,14 @@
+prompt_id: article-translation-system
+prompt_name: Article Translation System Prompt
+version: 1.0.0
+status: active
+owner: ai-platform-team
+created_at: 2026-08-04
+updated_at: 2026-08-04
+approved_by: null
+change_summary: Initial version for CMS auto-translation ID to EN and UZ
+model_compatibility:
+  - openai-compatible-chat-completions
+rollback_version: null
+output_schema: article-translation.schema.js
+test_suite: article-translation-tests

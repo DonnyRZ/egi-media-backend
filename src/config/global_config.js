@@ -45,6 +45,15 @@ const config = {
     user: process.env.SMTP_USER || process.env.MAIL_USER,
     pass: process.env.SMTP_PASS || process.env.MAIL_PASS,
   },
+  // OpenAI-compatible chat completions for CMS article auto-translation.
+  ai: {
+    enabled: process.env.AI_ENABLED,
+    apiKey: process.env.AI_API_KEY,
+    baseUrl: process.env.AI_BASE_URL,
+    model: process.env.AI_MODEL,
+    timeoutMs: process.env.AI_TIMEOUT_MS,
+    maxRetries: process.env.AI_MAX_RETRIES,
+  },
 };
 
 const store = new confidence.Store(config);
