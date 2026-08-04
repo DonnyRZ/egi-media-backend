@@ -12,7 +12,9 @@ class Query {
     try {
       const query = `
         SELECT id, author_id, status, published_at, category_id,
-               title, slug, summary, featured_image
+               title, slug, summary, content, featured_image,
+               title_en, content_en, summary_en,
+               title_uz, content_uz, summary_uz
         FROM articles
         WHERE id = $1
           AND deleted_at IS NULL
