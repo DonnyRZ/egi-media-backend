@@ -45,7 +45,7 @@ const config = {
     user: process.env.SMTP_USER || process.env.MAIL_USER,
     pass: process.env.SMTP_PASS || process.env.MAIL_PASS,
   },
-  // OpenAI-compatible chat completions for CMS article auto-translation.
+  // OpenAI-compatible Responses API for CMS article auto-translation.
   ai: {
     enabled: process.env.AI_ENABLED,
     apiKey: process.env.AI_API_KEY,

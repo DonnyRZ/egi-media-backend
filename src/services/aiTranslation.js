@@ -151,6 +151,8 @@ async function translateArticle(titleId, contentId) {
   } catch (error) {
     safeLogError(requestId, error.code || "AI_PROCESSING_FAILED", "Article translation failed", {
       retryable: Boolean(error.retryable),
+      status: error.details?.status || null,
+      errorCode: error.details?.errorCode || null,
     });
     return {
       status: "processing_failed",
@@ -159,6 +161,7 @@ async function translateArticle(titleId, contentId) {
         requestId,
         promptId: PROMPT_ID,
         promptVersion: PROMPT_VERSION,
+        error: error.code || error.message || "AI translation failed",
       },
     };
   }

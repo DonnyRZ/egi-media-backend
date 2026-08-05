@@ -162,7 +162,11 @@ async function processTranslationJob(job) {
 
   const aiResult = await translateArticle(article.title, article.content);
   if (aiResult.status !== "success" || !aiResult.result?.en || !aiResult.result?.uz) {
-    const message = aiResult.meta?.error || "AI translation failed";
+    const message =
+      aiResult.meta?.error ||
+      (aiResult.status === "invalid_input"
+        ? "AI translation invalid input"
+        : "AI translation failed");
     await setArticleTranslationStatus(db, articleId, "failed");
     await markJob(db, jobId, {
       job_status: "failed",
