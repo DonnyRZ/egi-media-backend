@@ -1,14 +1,14 @@
 prompt_id: article-translation-system
 prompt_name: Article Translation System Prompt
-version: 1.0.0
+version: 1.1.0
 status: active
 owner: ai-platform-team
 created_at: 2026-08-04
-updated_at: 2026-08-04
+updated_at: 2026-08-05
 approved_by: null
-change_summary: Initial version for CMS auto-translation ID to EN and UZ
+change_summary: Include summary/standfirst in ID to EN and UZ translation contract
 model_compatibility:
-  - openai-compatible-chat-completions
-rollback_version: null
+  - openai-compatible-responses-api
+rollback_version: 1.0.0
 output_schema: article-translation.schema.js
 test_suite: article-translation-tests

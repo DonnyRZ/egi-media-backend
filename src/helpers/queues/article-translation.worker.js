@@ -66,11 +66,11 @@ async function applyTranslations(db, articleId, result) {
     [
       en.title || null,
       en.title ? generateSlug(en.title) : null,
-      en.summary ?? null,
+      en.summary != null && String(en.summary).trim() ? String(en.summary).trim() : null,
       en.content || null,
       uz.title || null,
       uz.title ? generateSlug(uz.title) : null,
-      uz.summary ?? null,
+      uz.summary != null && String(uz.summary).trim() ? String(uz.summary).trim() : null,
       uz.content || null,
       articleId,
     ],
@@ -144,8 +144,15 @@ async function processTranslationJob(job) {
     throw new Error("Article not found");
   }
 
-  const hasEn = article.title_en?.trim() && article.content_en?.trim();
-  const hasUz = article.title_uz?.trim() && article.content_uz?.trim();
+  const needSummary = Boolean(article.summary?.trim());
+  const hasEn =
+    article.title_en?.trim() &&
+    article.content_en?.trim() &&
+    (!needSummary || article.summary_en?.trim());
+  const hasUz =
+    article.title_uz?.trim() &&
+    article.content_uz?.trim() &&
+    (!needSummary || article.summary_uz?.trim());
   if (hasEn && hasUz) {
     await setArticleTranslationStatus(db, articleId, "ready");
     await markJob(db, jobId, {
@@ -160,7 +167,11 @@ async function processTranslationJob(job) {
     return { skippedAi: true };
   }
 
-  const aiResult = await translateArticle(article.title, article.content);
+  const aiResult = await translateArticle(
+    article.title,
+    article.content,
+    article.summary || "",
+  );
   if (aiResult.status !== "success" || !aiResult.result?.en || !aiResult.result?.uz) {
     const message =
       aiResult.meta?.error ||

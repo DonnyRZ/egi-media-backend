@@ -15,8 +15,8 @@ const ctx = "AI-Translation-Service";
 
 function emptyResult() {
   return {
-    en: { title: "", content: "" },
-    uz: { title: "", content: "" },
+    en: { title: "", summary: "", content: "" },
+    uz: { title: "", summary: "", content: "" },
   };
 }
 
@@ -31,7 +31,7 @@ function safeLogError(requestId, code, message, extra = {}) {
   });
 }
 
-function parseAndValidate(rawText) {
+function parseAndValidate(rawText, { sourceHasSummary = false } = {}) {
   let parsedJson;
   try {
     parsedJson = JSON.parse(rawText);
@@ -58,7 +58,7 @@ function parseAndValidate(rawText) {
     };
   }
 
-  if (!isSuccessfulTranslation(validated.data)) {
+  if (!isSuccessfulTranslation(validated.data, { sourceHasSummary })) {
     return {
       ok: false,
       value: validated.data,
@@ -73,27 +73,23 @@ function parseAndValidate(rawText) {
 }
 
 /**
- * Translate Indonesian article title/content to English and Uzbek.
- * Called by article domain only when status is published/scheduled (final content).
- * Prompt assembly, provider call, and Zod validation all run on the backend.
+ * Translate Indonesian article title/summary/content to English and Uzbek.
  *
  * @param {string} titleId
  * @param {string} contentId
- * @returns {Promise<{
- *   status: "success" | "invalid_input" | "processing_failed",
- *   result: { en: { title: string, content: string }, uz: { title: string, content: string } },
- *   meta?: { requestId: string, promptId: string, promptVersion: string }
- * }>}
+ * @param {string} [summaryId]
  */
-async function translateArticle(titleId, contentId) {
+async function translateArticle(titleId, contentId, summaryId = "") {
   const requestId = uuidv4();
-  const built = buildArticleTranslationPrompt(titleId, contentId);
+  const built = buildArticleTranslationPrompt(titleId, contentId, summaryId);
+  const sourceHasSummary = Boolean(built.input.summary);
 
   if (!built.input.title || !built.input.content) {
     logger.warn(ctx, "translateArticle", "Rejected empty translation input", {
       requestId,
       code: "AI_INVALID_INPUT",
       titleLength: built.input.title.length,
+      summaryLength: built.input.summary.length,
       contentLength: built.input.content.length,
     });
     return {
@@ -114,7 +110,7 @@ async function translateArticle(titleId, contentId) {
       requestId,
     });
 
-    const validated = parseAndValidate(completion.rawText);
+    const validated = parseAndValidate(completion.rawText, { sourceHasSummary });
     if (!validated.ok) {
       safeLogError(requestId, validated.code, "AI translation output validation failed", {
         model: completion.model || null,

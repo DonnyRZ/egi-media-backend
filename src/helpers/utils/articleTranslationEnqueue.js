@@ -8,14 +8,22 @@ function localesComplete(source) {
   if (!source) return false;
   const enTitle = source.title_en ?? source.en?.title;
   const enContent = source.content_en ?? source.en?.content;
+  const enSummary = source.summary_en ?? source.en?.summary;
   const uzTitle = source.title_uz ?? source.uz?.title;
   const uzContent = source.content_uz ?? source.uz?.content;
-  return Boolean(
+  const uzSummary = source.summary_uz ?? source.uz?.summary;
+  const sourceSummary = source.summary ?? "";
+  const needSummary = Boolean(String(sourceSummary).trim());
+
+  const coreReady = Boolean(
     enTitle?.trim() &&
       enContent?.trim() &&
       uzTitle?.trim() &&
       uzContent?.trim(),
   );
+  if (!coreReady) return false;
+  if (!needSummary) return true;
+  return Boolean(enSummary?.trim() && uzSummary?.trim());
 }
 
 /**

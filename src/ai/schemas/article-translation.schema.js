@@ -2,12 +2,13 @@ const { z } = require("zod");
 
 const localeTranslationSchema = z.object({
   title: z.string(),
+  summary: z.string(),
   content: z.string(),
 });
 
 /**
  * Zod schema for AI article translation output.
- * Matches the CMS auto-translation contract.
+ * Matches the CMS auto-translation contract (title + summary + content).
  */
 const articleTranslationOutputSchema = z.object({
   status: z.enum(["success", "invalid_input", "processing_failed"]),
@@ -40,18 +41,20 @@ const ARTICLE_TRANSLATION_JSON_SCHEMA = Object.freeze({
           en: {
             type: "object",
             additionalProperties: false,
-            required: ["title", "content"],
+            required: ["title", "summary", "content"],
             properties: {
               title: { type: "string" },
+              summary: { type: "string" },
               content: { type: "string" },
             },
           },
           uz: {
             type: "object",
             additionalProperties: false,
-            required: ["title", "content"],
+            required: ["title", "summary", "content"],
             properties: {
               title: { type: "string" },
+              summary: { type: "string" },
               content: { type: "string" },
             },
           },
@@ -63,15 +66,18 @@ const ARTICLE_TRANSLATION_JSON_SCHEMA = Object.freeze({
 
 /**
  * Extra business-rule check after schema validation.
- * Success responses must contain non-empty title/content per locale.
+ * Success: non-empty title+content per locale.
+ * Summary must be non-empty when the Indonesian source summary was provided.
  */
-function isSuccessfulTranslation(parsed) {
+function isSuccessfulTranslation(parsed, { sourceHasSummary = false } = {}) {
   if (parsed.status !== "success") return false;
 
   const locales = [parsed.result.en, parsed.result.uz];
-  return locales.every(
-    (locale) => locale.title.trim().length > 0 && locale.content.trim().length > 0,
-  );
+  return locales.every((locale) => {
+    if (!locale.title.trim() || !locale.content.trim()) return false;
+    if (sourceHasSummary && !locale.summary.trim()) return false;
+    return true;
+  });
 }
 
 module.exports = {
