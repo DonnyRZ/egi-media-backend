@@ -81,4 +81,18 @@ module.exports = (server) => {
     verifyRoleName(["author", "superadmin"]),
     articleHandler.updateArticlePlacements
   );
+
+  server.get(
+    "/api/v1/article-translation-jobs",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.getTranslationJobs
+  );
+
+  server.post(
+    "/api/v1/articles/:id/translate/retry",
+    verifyToken,
+    verifyRoleName(["author", "superadmin"]),
+    articleHandler.retryTranslate
+  );
 };

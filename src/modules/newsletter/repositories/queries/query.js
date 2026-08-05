@@ -73,6 +73,7 @@ class NewsletterQuery {
        WHERE na.newsletter_id = $1
          AND a.deleted_at IS NULL
          AND a.status = 'published'
+         AND a.translation_status = 'ready'
        ORDER BY na.display_order ASC, a.id ASC;`,
       [newsletterId]
     );

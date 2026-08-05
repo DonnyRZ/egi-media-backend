@@ -92,6 +92,12 @@ const getArticleStatsParamType = joi.object({
   author_id: joi.string().uuid().optional().allow(null),
 });
 
+const getTranslationJobsParamType = joi.object({
+  user_id: joi.string().uuid().required(),
+  actor_role: joi.string().required(),
+  limit: joi.number().integer().min(1).max(100).default(30),
+});
+
 module.exports = {
   getArticlesParamType,
   getArticleByIdParamType,
@@ -101,4 +107,5 @@ module.exports = {
   getPersonalizedArticlesParamType,
   getManageArticlesParamType,
   getArticleStatsParamType,
+  getTranslationJobsParamType,
 };

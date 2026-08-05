@@ -43,6 +43,7 @@ class Command {
     translationValues,
     topic_ids,
     tag_ids,
+    translation_status = "none",
   }) {
     try {
       const query = `
@@ -52,11 +53,13 @@ class Command {
           featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
+          translation_status,
           created_at, updated_at
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
           $13, $14, $15, $16, $17, $18, $19, $20,
+          $21,
           NOW(), NOW()
         )
         RETURNING
@@ -65,6 +68,7 @@ class Command {
           featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
+          translation_status,
           created_at, updated_at
       `;
 
@@ -74,6 +78,7 @@ class Command {
         featured_image || null, status, published_at || null,
         placements && placements.length > 0 ? placements : ["latest_news"],
         ...TRANSLATION_COLUMNS.map((col) => translationValues?.[col] ?? null),
+        translation_status || "none",
       ];
       const queries = [{ query, values }];
 
@@ -100,7 +105,24 @@ class Command {
   }
 
   // ─── Update Article ───────────────────────────────────────────────────────────
-  async updateArticle({ id, category_id, series_id, title, slug, summary, content, featured_image, status, published_at, placements, translationValues, topic_ids, tag_ids, updatedFields }) {
+  async updateArticle({
+    id,
+    category_id,
+    series_id,
+    title,
+    slug,
+    summary,
+    content,
+    featured_image,
+    status,
+    published_at,
+    placements,
+    translationValues,
+    topic_ids,
+    tag_ids,
+    updatedFields,
+    translation_status,
+  }) {
     try {
       const setClauses = [];
       const values = [];
@@ -156,6 +178,11 @@ class Command {
         values.push(placements ?? []);
         idx++;
       }
+      if (updatedFields.includes("translation_status") && translation_status) {
+        setClauses.push(`translation_status = $${idx}`);
+        values.push(translation_status);
+        idx++;
+      }
 
       for (const col of TRANSLATION_COLUMNS) {
         if (updatedFields.includes(col)) {
@@ -179,6 +206,7 @@ class Command {
           featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
+          translation_status,
           created_at, updated_at
       `;
 
@@ -261,7 +289,13 @@ class Command {
   }
 
   // ─── Update Article Status ────────────────────────────────────────────────────
-  async updateArticleStatus({ id, status, published_at, translationValues = null }) {
+  async updateArticleStatus({
+    id,
+    status,
+    published_at,
+    translationValues = null,
+    translation_status = null,
+  }) {
     try {
       const setClauses = [
         "status = $1",
@@ -270,6 +304,12 @@ class Command {
       ];
       const values = [status, published_at || null];
       let idx = 3;
+
+      if (translation_status) {
+        setClauses.push(`translation_status = $${idx}`);
+        values.push(translation_status);
+        idx += 1;
+      }
 
       if (translationValues && typeof translationValues === "object") {
         for (const col of TRANSLATION_COLUMNS) {
@@ -287,7 +327,7 @@ class Command {
         WHERE id = $${idx}
           AND deleted_at IS NULL
         RETURNING
-          id, status, published_at, updated_at,
+          id, status, published_at, translation_status, updated_at,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz
       `;

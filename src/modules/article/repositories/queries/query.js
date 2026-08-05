@@ -14,7 +14,8 @@ class Query {
         SELECT id, author_id, status, published_at, category_id,
                title, slug, summary, content, featured_image,
                title_en, content_en, summary_en,
-               title_uz, content_uz, summary_uz
+               title_uz, content_uz, summary_uz,
+               translation_status
         FROM articles
         WHERE id = $1
           AND deleted_at IS NULL
@@ -62,7 +63,11 @@ class Query {
   async findAllPublishedArticles({ page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort }) {
     try {
       const offset = (page - 1) * limit;
-      const conditions = ["a.deleted_at IS NULL", "a.status = 'published'"];
+      const conditions = [
+        "a.deleted_at IS NULL",
+        "a.status = 'published'",
+        "a.translation_status = 'ready'",
+      ];
       const values = [];
       let idx = 1;
 
@@ -141,6 +146,7 @@ class Query {
           a.summary_uz,
           a.featured_image,
           a.status,
+          a.translation_status,
           a.placements,
           a.published_at,
           a.created_at,
@@ -171,7 +177,11 @@ class Query {
   // ─── Count Published Articles ─────────────────────────────────────────────────
   async countAllPublishedArticles({ search, category_id, topic_id, tag_id, author_id, series_id, placement }) {
     try {
-      const conditions = ["a.deleted_at IS NULL", "a.status = 'published'"];
+      const conditions = [
+        "a.deleted_at IS NULL",
+        "a.status = 'published'",
+        "a.translation_status = 'ready'",
+      ];
       const values = [];
       let idx = 1;
 
@@ -263,6 +273,7 @@ class Query {
           a.content_uz,
           a.featured_image,
           a.status,
+          a.translation_status,
           a.placements,
           a.published_at,
           a.created_at,
@@ -373,6 +384,7 @@ class Query {
         LEFT JOIN series s ON s.id = a.series_id
         WHERE (a.slug = $1 OR a.slug_en = $1 OR a.slug_uz = $1)
           AND a.status = 'published'
+          AND a.translation_status = 'ready'
           AND a.deleted_at IS NULL
         LIMIT 1
       `;
@@ -502,6 +514,7 @@ class Query {
           a.summary_uz,
           a.featured_image,
           a.status,
+          a.translation_status,
           a.placements,
           a.published_at,
           a.created_at,
@@ -611,6 +624,7 @@ class Query {
           a.summary_uz,
           a.featured_image,
           a.status,
+          a.translation_status,
           a.placements,
           a.published_at,
           a.created_at,
@@ -818,6 +832,8 @@ class Query {
         LEFT JOIN categories c ON c.id = a.category_id
         WHERE sa.user_id = $1
           AND a.deleted_at IS NULL
+          AND a.status = 'published'
+          AND a.translation_status = 'ready'
         ORDER BY sa.created_at DESC
         LIMIT $2 OFFSET $3
       `;
@@ -839,6 +855,8 @@ class Query {
         INNER JOIN articles a ON a.id = sa.article_id
         WHERE sa.user_id = $1
           AND a.deleted_at IS NULL
+          AND a.status = 'published'
+          AND a.translation_status = 'ready'
       `;
 
       const result = await this.db.executeQuery(query, [user_id]);
@@ -883,6 +901,7 @@ class Query {
         LEFT JOIN categories c ON c.id = a.category_id
         WHERE a.deleted_at IS NULL
           AND a.status = 'published'
+          AND a.translation_status = 'ready'
           AND EXISTS (
             SELECT 1
             FROM article_topics at2
@@ -910,6 +929,7 @@ class Query {
         FROM articles a
         WHERE a.deleted_at IS NULL
           AND a.status = 'published'
+          AND a.translation_status = 'ready'
           AND EXISTS (
             SELECT 1
             FROM article_topics at2
@@ -924,6 +944,44 @@ class Query {
       return wrapper.data(result.rows[0]?.total || 0);
     } catch (error) {
       logger.error(ctx, "countPersonalizedArticles", "Error counting personalized articles", error);
+      return wrapper.error(error);
+    }
+  }
+
+  // ─── Translation jobs (CMS bell) ─────────────────────────────────────────────
+  async findTranslationJobs({ user_id, is_superadmin, limit = 30 }) {
+    try {
+      const values = [];
+      let where = "WHERE 1=1";
+      if (!is_superadmin) {
+        values.push(user_id);
+        where = `WHERE j.requested_by = $${values.length}`;
+      }
+      values.push(limit);
+      const query = `
+        SELECT
+          j.id,
+          j.article_id,
+          j.requested_by,
+          j.target_status,
+          j.job_status,
+          j.error_message,
+          j.created_at,
+          j.started_at,
+          j.finished_at,
+          a.title AS article_title,
+          a.translation_status,
+          a.status AS article_status
+        FROM article_translation_jobs j
+        INNER JOIN articles a ON a.id = j.article_id AND a.deleted_at IS NULL
+        ${where}
+        ORDER BY j.created_at DESC
+        LIMIT $${values.length}
+      `;
+      const result = await this.db.executeQuery(query, values);
+      return wrapper.data(result.rows);
+    } catch (error) {
+      logger.error(ctx, "findTranslationJobs", "Error querying translation jobs", error);
       return wrapper.error(error);
     }
   }

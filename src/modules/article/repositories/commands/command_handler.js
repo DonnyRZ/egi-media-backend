@@ -13,6 +13,7 @@ const saveArticle = async (payload) => domain.saveArticle(payload);
 const unsaveArticle = async (payload) => domain.unsaveArticle(payload);
 const shareArticle = async (payload) => domain.shareArticle(payload);
 const recordArticleView = async (payload) => domain.recordArticleView(payload);
+const retryTranslate = async (payload) => domain.retryTranslate(payload);
 
 module.exports = {
   createArticle,
@@ -24,4 +25,5 @@ module.exports = {
   unsaveArticle,
   shareArticle,
   recordArticleView,
+  retryTranslate,
 };

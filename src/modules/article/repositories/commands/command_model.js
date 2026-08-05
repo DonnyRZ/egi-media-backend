@@ -135,6 +135,12 @@ const recordArticleViewParamType = joi.object({
   ip_address: joi.string().max(64).optional().allow(null, ""),
 });
 
+const retryTranslateParamType = joi.object({
+  id: joi.string().uuid().required(),
+  actor_id: joi.string().uuid().required(),
+  actor_role: joi.string().required(),
+});
+
 module.exports = {
   ARTICLE_PLACEMENTS,
   createArticleParamType,
@@ -145,4 +151,5 @@ module.exports = {
   saveArticleParamType,
   shareArticleParamType,
   recordArticleViewParamType,
+  retryTranslateParamType,
 };

@@ -360,6 +360,42 @@ const shareArticle = async (req, res) => {
   return sendResponse(result, res);
 };
 
+// ─── GET /api/v1/article-translation-jobs ─────────────────────────────────────
+const getTranslationJobs = async (req, res) => {
+  const payload = {
+    user_id: req.userMeta?.id,
+    actor_role: req.userMeta?.role,
+    limit: req.query.limit,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    queryModel.getTranslationJobsParamType,
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await queryHandler.getTranslationJobs(validatePayload.data);
+  return sendResponse(result, res);
+};
+
+// ─── POST /api/v1/articles/:id/translate/retry ────────────────────────────────
+const retryTranslate = async (req, res) => {
+  const payload = {
+    id: req.params.id,
+    actor_id: req.userMeta?.id,
+    actor_role: req.userMeta?.role,
+  };
+  const validatePayload = validator.isValidPayload(
+    payload,
+    commandModel.retryTranslateParamType,
+  );
+  if (validatePayload.err) {
+    return sendResponse(validatePayload, res);
+  }
+  const result = await commandHandler.retryTranslate(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 module.exports = {
   getArticles,
   createArticle,
@@ -378,4 +414,6 @@ module.exports = {
   unsaveArticle,
   shareArticle,
   recordArticleView,
+  getTranslationJobs,
+  retryTranslate,
 };

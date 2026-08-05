@@ -109,6 +109,7 @@ class SeriesQuery {
        WHERE a.series_id = $1
          AND a.deleted_at IS NULL
          AND a.status = 'published'
+         AND a.translation_status = 'ready'
        ORDER BY a.published_at DESC NULLS LAST, a.id ASC;`,
       [seriesId]
     );

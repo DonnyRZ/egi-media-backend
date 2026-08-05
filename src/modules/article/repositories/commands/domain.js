@@ -12,6 +12,10 @@ const {
 } = require("../../../../helpers/errors");
 const { notifyTopicSubscribersOnPublish } = require("../../../../helpers/utils/topicPublishNotifier");
 const { translateArticle } = require("../../../../services/aiTranslation");
+const {
+  localesComplete,
+  enqueueArticleTranslation,
+} = require("../../../../helpers/utils/articleTranslationEnqueue");
 const ctx = "Article-Command-Domain";
 
 // ─── Helper: generate slug dari title ────────────────────────────────────────
@@ -34,17 +38,6 @@ const AI_TRANSLATION_STATUSES = ["published", "scheduled"];
 
 function isAiTranslationStatus(status) {
   return AI_TRANSLATION_STATUSES.includes(status);
-}
-
-function storedLocaleEntry(article, loc) {
-  const title = article[`title_${loc}`];
-  const content = article[`content_${loc}`];
-  if (!title?.trim() || !content?.trim()) return null;
-  return {
-    title,
-    content,
-    summary: article[`summary_${loc}`] ?? null,
-  };
 }
 
 function buildTranslationValues(resolvedTranslations) {
@@ -201,14 +194,25 @@ class ArticleCommandDomain {
     const id = uuidv4();
     const slug = generateSlug(title);
 
-    // Draft/review: persist explicit EN/UZ only. AI waits until published/scheduled.
+    // Draft/review: persist explicit EN/UZ only.
+    // Final statuses: explicit overrides win; otherwise enqueue async AI translate.
     const resolvedTranslations = await this.resolveTranslations({
       title,
       content,
       translations,
-      allowAi: isAiTranslationStatus(status || "draft"),
+      allowAi: false,
     });
     const translationValues = buildTranslationValues(resolvedTranslations);
+    const finalStatus = status || "draft";
+    let translationStatus = "none";
+    if (isAiTranslationStatus(finalStatus)) {
+      translationStatus = localesComplete({
+        en: resolvedTranslations.en,
+        uz: resolvedTranslations.uz,
+      })
+        ? "ready"
+        : "pending";
+    }
 
     const articleResult = await this.command.insertArticle({
       id, author_id, category_id, series_id,
@@ -216,6 +220,7 @@ class ArticleCommandDomain {
       featured_image, status, published_at,
       placements: placements && placements.length > 0 ? placements : ["latest_news"],
       translationValues, topic_ids, tag_ids,
+      translation_status: translationStatus,
     });
 
     if (articleResult.err) {
@@ -240,11 +245,14 @@ class ArticleCommandDomain {
 
     logger.info(ctx, "createArticle", "Article created successfully", { id });
 
-    if ((status || "draft") === "published") {
-      console.log("[ArticlePublish] createArticle published — triggering topic emails", {
+    if (isAiTranslationStatus(finalStatus) && translationStatus === "pending") {
+      await enqueueArticleTranslation({
+        db: this.db,
         articleId: id,
-        topicIds: topic_ids || [],
+        requestedBy: author_id,
+        targetStatus: finalStatus,
       });
+    } else if (finalStatus === "published" && translationStatus === "ready") {
       void notifyTopicSubscribersOnPublish({
         db: this.db,
         article: articleResult.data,
@@ -301,9 +309,9 @@ class ArticleCommandDomain {
     const effectiveContent = content !== undefined ? content : article.content;
     const contentChanged = title !== undefined || content !== undefined;
 
-    // Explicit payload always wins per-locale. AI only when becoming/already final.
-    const allowAi = isAiTranslationStatus(nextStatus);
-    let resolvedTranslations = translations || {};
+    const becomingFinal =
+      isAiTranslationStatus(nextStatus) &&
+      (!isAiTranslationStatus(article.status) || contentChanged);
     const missingLocales = TRANSLATION_LOCALES.some((loc) => {
       const entry = translations?.[loc];
       const hasPayload = entry?.title?.trim() && entry?.content?.trim();
@@ -312,37 +320,52 @@ class ArticleCommandDomain {
       return !hasPayload && (contentChanged || !hasStored);
     });
 
-    if (allowAi && missingLocales && effectiveTitle && effectiveContent) {
-      const seedTranslations = {
-        en: translations?.en || storedLocaleEntry(article, "en"),
-        uz: translations?.uz || storedLocaleEntry(article, "uz"),
-      };
-      resolvedTranslations = await this.resolveTranslations({
+    // Persist explicit EN/UZ overrides only (AI runs async via the queue).
+    const translationValues = {};
+    if (translations) {
+      const resolvedTranslations = await this.resolveTranslations({
         title: effectiveTitle,
         content: effectiveContent,
-        translations: seedTranslations,
-        allowAi: true,
+        translations,
+        allowAi: false,
       });
+      for (const loc of TRANSLATION_LOCALES) {
+        const entry = resolvedTranslations?.[loc];
+        if (!entry) continue;
+        if (entry.title !== undefined) {
+          updatedFields.push(`title_${loc}`, `slug_${loc}`);
+          translationValues[`title_${loc}`] = entry.title;
+          translationValues[`slug_${loc}`] = generateSlug(entry.title);
+        }
+        if (entry.summary !== undefined) {
+          updatedFields.push(`summary_${loc}`);
+          translationValues[`summary_${loc}`] = entry.summary ?? null;
+        }
+        if (entry.content !== undefined) {
+          updatedFields.push(`content_${loc}`);
+          translationValues[`content_${loc}`] = entry.content;
+        }
+      }
     }
 
-    // Terjemahan opsional (en/uz): patch per field, regenerasi slug bila title diubah.
-    const translationValues = {};
-    for (const loc of TRANSLATION_LOCALES) {
-      const entry = resolvedTranslations?.[loc];
-      if (!entry) continue;
-      if (entry.title !== undefined) {
-        updatedFields.push(`title_${loc}`, `slug_${loc}`);
-        translationValues[`title_${loc}`] = entry.title;
-        translationValues[`slug_${loc}`] = generateSlug(entry.title);
+    let nextTranslationStatus;
+    if (isAiTranslationStatus(nextStatus)) {
+      const mergedForCheck = {
+        title_en: translationValues.title_en ?? article.title_en,
+        content_en: translationValues.content_en ?? article.content_en,
+        title_uz: translationValues.title_uz ?? article.title_uz,
+        content_uz: translationValues.content_uz ?? article.content_uz,
+      };
+      if (localesComplete(mergedForCheck)) {
+        nextTranslationStatus = "ready";
+      } else if (becomingFinal || missingLocales || article.translation_status === "failed") {
+        nextTranslationStatus = "pending";
       }
-      if (entry.summary !== undefined) {
-        updatedFields.push(`summary_${loc}`);
-        translationValues[`summary_${loc}`] = entry.summary ?? null;
-      }
-      if (entry.content !== undefined) {
-        updatedFields.push(`content_${loc}`);
-        translationValues[`content_${loc}`] = entry.content;
-      }
+    } else if (status !== undefined && !isAiTranslationStatus(nextStatus)) {
+      nextTranslationStatus = "none";
+    }
+    if (nextTranslationStatus) {
+      updatedFields.push("translation_status");
     }
 
     if (updatedFields.length === 0 && topic_ids === undefined && tag_ids === undefined) {
@@ -355,6 +378,7 @@ class ArticleCommandDomain {
       id, category_id, series_id, title, slug,
       summary, content, featured_image, placements, translationValues, status, published_at,
       topic_ids, tag_ids, updatedFields,
+      translation_status: nextTranslationStatus,
     });
 
     if (updateResult.err) {
@@ -385,11 +409,18 @@ class ArticleCommandDomain {
 
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });
 
-    if (article.status !== "published" && nextStatus === "published") {
-      console.log("[ArticlePublish] updateArticle published — triggering topic emails", {
+    if (nextTranslationStatus === "pending") {
+      await enqueueArticleTranslation({
+        db: this.db,
         articleId: id,
-        topicIds: topic_ids ?? null,
+        requestedBy: actor_id,
+        targetStatus: nextStatus,
       });
+    } else if (
+      article.status !== "published" &&
+      nextStatus === "published" &&
+      nextTranslationStatus === "ready"
+    ) {
       void notifyTopicSubscribersOnPublish({
         db: this.db,
         article: updateResult.data,
@@ -547,27 +578,25 @@ class ArticleCommandDomain {
       finalPublishedAt = published_at;
     }
 
-    // Auto-translate missing EN/UZ when the article becomes final.
-    let translationValues = null;
-    if (isAiTranslationStatus(status) && article.title && article.content) {
-      const resolvedTranslations = await this.resolveTranslations({
-        title: article.title,
-        content: article.content,
-        translations: {
-          en: storedLocaleEntry(article, "en"),
-          uz: storedLocaleEntry(article, "uz"),
-        },
-        allowAi: true,
-      });
-      const built = buildTranslationValues(resolvedTranslations);
-      if (Object.keys(built).length > 0) translationValues = built;
+    // Final statuses: skip AI if EN+UZ already complete; else enqueue async translate.
+    let translationStatus = article.translation_status || "none";
+    let shouldEnqueue = false;
+    if (isAiTranslationStatus(status)) {
+      if (localesComplete(article)) {
+        translationStatus = "ready";
+      } else {
+        translationStatus = "pending";
+        shouldEnqueue = true;
+      }
+    } else if (["draft", "review", "archived"].includes(status)) {
+      translationStatus = "none";
     }
 
     const result = await this.command.updateArticleStatus({
       id,
       status,
       published_at: finalPublishedAt,
-      translationValues,
+      translation_status: translationStatus,
     });
     if (result.err) {
       logger.error(ctx, "changeStatus", "Failed to update article status", result.err);
@@ -595,6 +624,7 @@ class ArticleCommandDomain {
         from_status: article.status,
         to_status: status,
         published_at: finalPublishedAt,
+        translation_status: translationStatus,
       },
       ip_address,
       user_agent,
@@ -604,12 +634,21 @@ class ArticleCommandDomain {
       id,
       status,
       auditAction,
+      translationStatus,
     });
 
-    if (article.status !== "published" && status === "published") {
-      console.log("[ArticlePublish] changeStatus published — triggering topic emails", {
+    if (shouldEnqueue) {
+      await enqueueArticleTranslation({
+        db: this.db,
         articleId: id,
+        requestedBy: actor_id,
+        targetStatus: status,
       });
+    } else if (
+      article.status !== "published" &&
+      status === "published" &&
+      translationStatus === "ready"
+    ) {
       void notifyTopicSubscribersOnPublish({
         db: this.db,
         article: {
@@ -686,6 +725,11 @@ class ArticleCommandDomain {
         new BadRequestError("Only published articles can be shared")
       );
     }
+    if (articleExists.data.translation_status !== "ready") {
+      return wrapper.error(
+        new BadRequestError("Article translations are not ready")
+      );
+    }
 
     const shareId = uuidv4();
     const result = await this.command.insertArticleShare({
@@ -720,6 +764,11 @@ class ArticleCommandDomain {
         new BadRequestError("Only published articles can be viewed")
       );
     }
+    if (articleExists.data.translation_status !== "ready") {
+      return wrapper.error(
+        new BadRequestError("Article translations are not ready")
+      );
+    }
 
     const viewId = uuidv4();
     const result = await this.command.insertArticleView({
@@ -738,6 +787,51 @@ class ArticleCommandDomain {
 
     logger.info(ctx, "recordArticleView", "Article view recorded", { article_id });
     return wrapper.data({ view_count });
+  }
+
+  // ─── Retry failed AI translation ────────────────────────────────────────────
+  async retryTranslate(payload) {
+    const { id, actor_id, actor_role } = payload;
+
+    const articleExists = await this.query.findArticleExistsById(id);
+    if (articleExists.err) {
+      return wrapper.error(new NotFoundError("Article not found"));
+    }
+
+    const article = articleExists.data;
+    if (actor_role !== "superadmin" && article.author_id !== actor_id) {
+      return wrapper.error(new ForbiddenError("You are not allowed to retry translation for this article"));
+    }
+
+    if (article.translation_status !== "failed") {
+      return wrapper.error(
+        new BadRequestError("Retry is only available when translation_status is failed")
+      );
+    }
+
+    if (!isAiTranslationStatus(article.status)) {
+      return wrapper.error(
+        new BadRequestError("Article must be published or scheduled to translate")
+      );
+    }
+
+    const enqueueResult = await enqueueArticleTranslation({
+      db: this.db,
+      articleId: id,
+      requestedBy: actor_id,
+      targetStatus: article.status,
+    });
+
+    if (enqueueResult.error) {
+      return wrapper.error(new BadRequestError(enqueueResult.error));
+    }
+
+    logger.info(ctx, "retryTranslate", "Translation re-queued", { id, jobId: enqueueResult.jobId });
+    return wrapper.data({
+      article_id: id,
+      job_id: enqueueResult.jobId,
+      translation_status: "pending",
+    });
   }
 }
 

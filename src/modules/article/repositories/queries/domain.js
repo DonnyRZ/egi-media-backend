@@ -50,6 +50,7 @@ class ArticleQueryDomain {
       published_at: row.published_at || null,
       created_at: row.created_at,
       updated_at: row.updated_at || null,
+      translation_status: row.translation_status || "none",
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
@@ -143,6 +144,7 @@ class ArticleQueryDomain {
       translations,
       featured_image: row.featured_image || null,
       status: row.status,
+      translation_status: row.translation_status || "none",
       placements: Array.isArray(row.placements) ? row.placements : ["latest_news"],
       published_at: row.published_at || null,
       created_at: row.created_at,
@@ -426,6 +428,37 @@ class ArticleQueryDomain {
       items,
       meta: { total, page, limit, total_pages },
     });
+  }
+
+  // ─── Translation jobs for CMS bell ──────────────────────────────────────────
+  async getTranslationJobs(payload) {
+    const { user_id, actor_role, limit } = payload;
+    const result = await this.query.findTranslationJobs({
+      user_id,
+      is_superadmin: actor_role === "superadmin",
+      limit: limit || 30,
+    });
+    if (result.err) {
+      logger.error(ctx, "getTranslationJobs", "Failed to fetch jobs", result.err);
+      return wrapper.error(result.err);
+    }
+
+    const items = (result.data || []).map((row) => ({
+      id: row.id,
+      article_id: row.article_id,
+      article_title: row.article_title,
+      requested_by: row.requested_by,
+      target_status: row.target_status,
+      job_status: row.job_status,
+      error_message: row.error_message || null,
+      translation_status: row.translation_status,
+      article_status: row.article_status,
+      created_at: row.created_at,
+      started_at: row.started_at || null,
+      finished_at: row.finished_at || null,
+    }));
+
+    return wrapper.data({ items });
   }
 }
 
