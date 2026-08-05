@@ -11,9 +11,6 @@
 const fs = require("fs");
 const path = require("path");
 const { Client } = require("pg");
-const {
-  enqueueArticleTranslation,
-} = require("../src/helpers/utils/articleTranslationEnqueue");
 
 const rootDir = path.join(__dirname, "..");
 
@@ -92,6 +89,11 @@ async function main() {
     return;
   }
 
+  // Lazy-load queue only when enqueueing (avoids Redis hang on --dry-run).
+  const {
+    enqueueArticleTranslation,
+  } = require("../src/helpers/utils/articleTranslationEnqueue");
+
   let queued = 0;
   let failed = 0;
   for (const row of rows) {
@@ -117,6 +119,14 @@ async function main() {
 
   console.log(JSON.stringify({ queued, failed, total: rows.length }));
   await client.end();
+  // Allow BullMQ/Redis connections to close so the process can exit.
+  try {
+    const { translationQueue } = require("../src/helpers/queues/article-translation.queue");
+    await translationQueue.close();
+  } catch {
+    // ignore
+  }
+  process.exit(failed > 0 && queued === 0 ? 1 : 0);
 }
 
 main().catch((error) => {
