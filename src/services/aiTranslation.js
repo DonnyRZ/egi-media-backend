@@ -74,6 +74,7 @@ function parseAndValidate(rawText) {
 
 /**
  * Translate Indonesian article title/content to English and Uzbek.
+ * Called by article domain only when status is published/scheduled (final content).
  * Prompt assembly, provider call, and Zod validation all run on the backend.
  *
  * @param {string} titleId

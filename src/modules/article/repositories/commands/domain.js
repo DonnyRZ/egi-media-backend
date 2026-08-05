@@ -29,6 +29,37 @@ const TRANSLATION_LOCALES = ["en", "uz"];
 
 const NON_DRAFT_STATUSES = ["review", "scheduled", "published"];
 
+// AI auto-translate runs only when the article is final (or becoming final).
+const AI_TRANSLATION_STATUSES = ["published", "scheduled"];
+
+function isAiTranslationStatus(status) {
+  return AI_TRANSLATION_STATUSES.includes(status);
+}
+
+function storedLocaleEntry(article, loc) {
+  const title = article[`title_${loc}`];
+  const content = article[`content_${loc}`];
+  if (!title?.trim() || !content?.trim()) return null;
+  return {
+    title,
+    content,
+    summary: article[`summary_${loc}`] ?? null,
+  };
+}
+
+function buildTranslationValues(resolvedTranslations) {
+  const translationValues = {};
+  for (const loc of TRANSLATION_LOCALES) {
+    const entry = resolvedTranslations?.[loc];
+    if (!entry?.title?.trim() || !entry?.content?.trim()) continue;
+    translationValues[`title_${loc}`] = entry.title.trim();
+    translationValues[`slug_${loc}`] = generateSlug(entry.title);
+    translationValues[`summary_${loc}`] = entry.summary ?? null;
+    translationValues[`content_${loc}`] = entry.content;
+  }
+  return translationValues;
+}
+
 // ─── Validasi status transition yang diizinkan ────────────────────────────────
 const ALLOWED_TRANSITIONS = {
   draft: ["review", "scheduled", "published"],
@@ -102,10 +133,11 @@ class ArticleCommandDomain {
   }
 
   /**
-   * Auto-fill missing EN/UZ translations from Indonesian title/content via AI.
+   * Resolve EN/UZ translations from explicit payload and optionally AI.
+   * AI runs only when allowAi=true (article is / becoming published or scheduled).
    * On AI failure: keep Indonesian-only (do not block save). Errors are logged safely.
    */
-  async resolveTranslations({ title, content, translations }) {
+  async resolveTranslations({ title, content, translations, allowAi = false }) {
     const next = {
       en: translations?.en ? { ...translations.en } : null,
       uz: translations?.uz ? { ...translations.uz } : null,
@@ -116,7 +148,7 @@ class ArticleCommandDomain {
       return !(entry?.title?.trim() && entry?.content?.trim());
     });
 
-    if (!needsAi) return next;
+    if (!needsAi || !allowAi) return next;
 
     const aiResult = await translateArticle(title, content);
     if (aiResult.status !== "success") {
@@ -169,22 +201,14 @@ class ArticleCommandDomain {
     const id = uuidv4();
     const slug = generateSlug(title);
 
+    // Draft/review: persist explicit EN/UZ only. AI waits until published/scheduled.
     const resolvedTranslations = await this.resolveTranslations({
       title,
       content,
       translations,
+      allowAi: isAiTranslationStatus(status || "draft"),
     });
-
-    // Bangun kolom terjemahan (en/uz) beserta slug per locale bila disediakan.
-    const translationValues = {};
-    for (const loc of TRANSLATION_LOCALES) {
-      const entry = resolvedTranslations?.[loc];
-      if (!entry) continue;
-      translationValues[`title_${loc}`] = entry.title;
-      translationValues[`slug_${loc}`] = generateSlug(entry.title);
-      translationValues[`summary_${loc}`] = entry.summary ?? null;
-      translationValues[`content_${loc}`] = entry.content;
-    }
+    const translationValues = buildTranslationValues(resolvedTranslations);
 
     const articleResult = await this.command.insertArticle({
       id, author_id, category_id, series_id,
@@ -277,8 +301,8 @@ class ArticleCommandDomain {
     const effectiveContent = content !== undefined ? content : article.content;
     const contentChanged = title !== undefined || content !== undefined;
 
-    // Auto-translate when ID text changes or requested locales are missing.
-    // Existing explicit translation payload still wins per-locale.
+    // Explicit payload always wins per-locale. AI only when becoming/already final.
+    const allowAi = isAiTranslationStatus(nextStatus);
     let resolvedTranslations = translations || {};
     const missingLocales = TRANSLATION_LOCALES.some((loc) => {
       const entry = translations?.[loc];
@@ -288,11 +312,16 @@ class ArticleCommandDomain {
       return !hasPayload && (contentChanged || !hasStored);
     });
 
-    if (missingLocales && effectiveTitle && effectiveContent) {
+    if (allowAi && missingLocales && effectiveTitle && effectiveContent) {
+      const seedTranslations = {
+        en: translations?.en || storedLocaleEntry(article, "en"),
+        uz: translations?.uz || storedLocaleEntry(article, "uz"),
+      };
       resolvedTranslations = await this.resolveTranslations({
         title: effectiveTitle,
         content: effectiveContent,
-        translations,
+        translations: seedTranslations,
+        allowAi: true,
       });
     }
 
@@ -518,7 +547,28 @@ class ArticleCommandDomain {
       finalPublishedAt = published_at;
     }
 
-    const result = await this.command.updateArticleStatus({ id, status, published_at: finalPublishedAt });
+    // Auto-translate missing EN/UZ when the article becomes final.
+    let translationValues = null;
+    if (isAiTranslationStatus(status) && article.title && article.content) {
+      const resolvedTranslations = await this.resolveTranslations({
+        title: article.title,
+        content: article.content,
+        translations: {
+          en: storedLocaleEntry(article, "en"),
+          uz: storedLocaleEntry(article, "uz"),
+        },
+        allowAi: true,
+      });
+      const built = buildTranslationValues(resolvedTranslations);
+      if (Object.keys(built).length > 0) translationValues = built;
+    }
+
+    const result = await this.command.updateArticleStatus({
+      id,
+      status,
+      published_at: finalPublishedAt,
+      translationValues,
+    });
     if (result.err) {
       logger.error(ctx, "changeStatus", "Failed to update article status", result.err);
       return wrapper.error(result.err);

@@ -261,19 +261,38 @@ class Command {
   }
 
   // ─── Update Article Status ────────────────────────────────────────────────────
-  async updateArticleStatus({ id, status, published_at }) {
+  async updateArticleStatus({ id, status, published_at, translationValues = null }) {
     try {
+      const setClauses = [
+        "status = $1",
+        "published_at = $2",
+        "updated_at = NOW()",
+      ];
+      const values = [status, published_at || null];
+      let idx = 3;
+
+      if (translationValues && typeof translationValues === "object") {
+        for (const col of TRANSLATION_COLUMNS) {
+          if (translationValues[col] === undefined) continue;
+          setClauses.push(`${col} = $${idx}`);
+          values.push(translationValues[col] ?? null);
+          idx += 1;
+        }
+      }
+
+      values.push(id);
       const query = `
         UPDATE articles
-        SET status = $1,
-            published_at = $2,
-            updated_at = NOW()
-        WHERE id = $3
+        SET ${setClauses.join(", ")}
+        WHERE id = $${idx}
           AND deleted_at IS NULL
-        RETURNING id, status, published_at, updated_at
+        RETURNING
+          id, status, published_at, updated_at,
+          title_en, slug_en, summary_en, content_en,
+          title_uz, slug_uz, summary_uz, content_uz
       `;
 
-      const result = await this.db.executeQuery(query, [status, published_at || null, id]);
+      const result = await this.db.executeQuery(query, values);
 
       if (!result || result.rowCount === 0) {
         return wrapper.error("Article not found");
