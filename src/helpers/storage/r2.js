@@ -18,8 +18,32 @@ const getClient = () => {
   return client;
 };
 
+const PLACEHOLDER_VALUES = new Set([
+  "",
+  "unused",
+  "your_endpoint_s3",
+  "your_token",
+  "your_user",
+  "your_secret",
+  "your-bucket-name",
+]);
+
+const isUsableConfigValue = (value) => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return false;
+  if (PLACEHOLDER_VALUES.has(normalized)) return false;
+  if (normalized.includes("example.invalid")) return false;
+  if (normalized.startsWith("your_")) return false;
+  return true;
+};
+
 const isConfigured = () =>
-  Boolean(r2.enpS3Client && r2.accS3User && r2.secS3User && r2.bucketName);
+  Boolean(
+    isUsableConfigValue(r2.enpS3Client) &&
+      isUsableConfigValue(r2.accS3User) &&
+      isUsableConfigValue(r2.secS3User) &&
+      isUsableConfigValue(r2.bucketName)
+  );
 
 /**
  * Uploads a buffer to R2 and returns its public URL.
