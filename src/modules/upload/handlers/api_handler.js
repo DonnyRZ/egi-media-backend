@@ -3,7 +3,8 @@ const wrapper = require("../../../helpers/utils/wrapper");
 const { sendResponse } = require("../../../helpers/utils/response");
 const { SUCCESS } = require("../../../helpers/http-status/status_code");
 const { BadRequestError, InternalServerError } = require("../../../helpers/errors");
-const storage = require("../../../helpers/storage/r2");
+const r2Storage = require("../../../helpers/storage/r2");
+const localStorage = require("../../../helpers/storage/local");
 
 const ALLOWED_MIME = {
   "image/jpeg": "jpg",
@@ -13,6 +14,8 @@ const ALLOWED_MIME = {
   "image/avif": "avif",
   "image/svg+xml": "svg",
 };
+
+const resolveStorage = () => (r2Storage.isConfigured() ? r2Storage : localStorage);
 
 // POST /api/v1/uploads (multipart/form-data, field "file")
 const uploadFile = async (req, res) => {
@@ -30,12 +33,7 @@ const uploadFile = async (req, res) => {
     );
   }
 
-  if (!storage.isConfigured()) {
-    return sendResponse(
-      wrapper.error(new InternalServerError("Object storage is not configured (R2)")),
-      res
-    );
-  }
+  const storage = resolveStorage();
 
   try {
     const key = `articles/${new Date().getFullYear()}/${uuidv4()}.${ext}`;

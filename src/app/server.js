@@ -22,11 +22,14 @@ class AppServer {
     this._middlewares();
     this._routes();
     this.server.use(express.urlencoded({ extended: true }));
-    // this.server.use("/uploads", express.static("uploads"));
-    // this.server.use(
-    //   "/uploads",
-    //   express.static(path.join(__dirname, "../uploads"))
-    // );
+    // Local upload fallback when Cloudflare R2 is not configured (demo/staging).
+    this.server.use(
+      "/uploads",
+      express.static(path.join(__dirname, "../../uploads"), {
+        fallthrough: true,
+        maxAge: "7d",
+      })
+    );
 
     pgConnectionPool.init(pgConfig);
     redisConnection.init();
