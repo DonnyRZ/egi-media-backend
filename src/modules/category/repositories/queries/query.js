@@ -18,7 +18,8 @@ class CategoryQuery {
     const rowsQuery = `
       SELECT ${SELECT_COLUMNS},
         (SELECT COUNT(*)::int FROM articles a
-         WHERE a.category_id = ${collection}.id AND a.deleted_at IS NULL) AS article_count
+         WHERE a.category_id = ${collection}.id AND a.deleted_at IS NULL
+           AND a.status = 'published' AND a.translation_status = 'ready') AS article_count
       FROM ${collection}
       WHERE (
         $1::text IS NULL

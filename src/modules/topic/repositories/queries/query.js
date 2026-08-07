@@ -23,7 +23,8 @@ class TopicQuery {
       SELECT ${SELECT_COLUMNS},
         (SELECT COUNT(*)::int FROM article_topics at2
          JOIN articles a ON a.id = at2.article_id
-         WHERE at2.topic_id = t.id AND a.deleted_at IS NULL) AS article_count
+         WHERE at2.topic_id = t.id AND a.deleted_at IS NULL
+           AND a.status = 'published' AND a.translation_status = 'ready') AS article_count
       FROM ${collection} t
       LEFT JOIN categories c ON c.id = t.category_id
       WHERE (

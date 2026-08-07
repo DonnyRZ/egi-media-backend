@@ -28,7 +28,8 @@ class SeriesQuery {
         t.name_uz AS topic_name_uz,
         t.slug AS topic_slug,
         (SELECT COUNT(*)::int FROM articles a
-         WHERE a.series_id = s.id AND a.deleted_at IS NULL) AS article_count
+         WHERE a.series_id = s.id AND a.deleted_at IS NULL
+           AND a.status = 'published' AND a.translation_status = 'ready') AS article_count
       FROM ${collection} s
       LEFT JOIN topics t ON t.id = s.topic_id
       WHERE (
