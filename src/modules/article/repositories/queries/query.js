@@ -126,7 +126,9 @@ class Query {
       const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
       const orderClause =
-        sort === "oldest"
+        placement === "headline"
+          ? "ORDER BY a.headline_position ASC NULLS LAST, a.created_at DESC NULLS LAST, a.published_at DESC NULLS LAST"
+          : sort === "oldest"
           ? "ORDER BY a.published_at ASC NULLS LAST"
           : sort === "popular"
           ? "ORDER BY (SELECT COUNT(*) FROM article_views av WHERE av.article_id = a.id) DESC, a.published_at DESC NULLS LAST"
@@ -148,6 +150,7 @@ class Query {
           a.status,
           a.translation_status,
           a.placements,
+          a.headline_position,
           a.published_at,
           a.created_at,
           u.id AS author_id,
@@ -167,7 +170,7 @@ class Query {
       values.push(limit, offset);
 
       const result = await this.db.executeQuery(query, values);
-      return wrapper.data(result.rows);
+      return wrapper.data(result?.rows ?? []);
     } catch (error) {
       logger.error(ctx, "findAllPublishedArticles", "Error querying articles", error);
       return wrapper.error(error);
@@ -246,7 +249,7 @@ class Query {
       `;
 
       const result = await this.db.executeQuery(query, values);
-      return wrapper.data(result.rows[0]?.total || 0);
+      return wrapper.data(result?.rows?.[0]?.total || 0);
     } catch (error) {
       logger.error(ctx, "countAllPublishedArticles", "Error counting articles", error);
       return wrapper.error(error);
@@ -275,6 +278,7 @@ class Query {
           a.status,
           a.translation_status,
           a.placements,
+          a.headline_position,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -348,6 +352,7 @@ class Query {
           a.featured_image,
           a.status,
           a.placements,
+          a.headline_position,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -516,6 +521,7 @@ class Query {
           a.status,
           a.translation_status,
           a.placements,
+          a.headline_position,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -626,6 +632,7 @@ class Query {
           a.status,
           a.translation_status,
           a.placements,
+          a.headline_position,
           a.published_at,
           a.created_at,
           a.updated_at,
@@ -887,6 +894,7 @@ class Query {
           a.featured_image,
           a.status,
           a.placements,
+          a.headline_position,
           a.published_at,
           a.created_at,
           a.updated_at,

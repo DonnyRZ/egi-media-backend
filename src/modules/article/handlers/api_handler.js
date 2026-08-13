@@ -264,6 +264,7 @@ const updateArticlePlacements = async (req, res) => {
     actor_id: req.userMeta?.id,
     actor_role: req.userMeta?.role,
     placements: req.body.placements,
+    headline_position: req.body.headline_position,
   };
   const validatePayload = validator.isValidPayload(
     payload,
