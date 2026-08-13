@@ -36,6 +36,7 @@ const config = {
     publicBaseUrl: process.env.R2_PUBLIC_BASE_URL,
   },
   redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
+  demoRequestTo: process.env.DEMO_REQUEST_TO || "egi.egiholding@gmail.com",
   mailConfig: {
     // Prefer SMTP_* aliases; keep MAIL_* for backward compatibility.
     host: process.env.SMTP_HOST || process.env.MAIL_HOST,

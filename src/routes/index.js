@@ -18,6 +18,7 @@ const AuditLog = require("./audit_log");
 const Notification = require("./notification");
 const Upload = require("./upload");
 const NewsFeed = require("./news_feed");
+const Profesional = require("./profesional");
 
 module.exports = (server) => {
   Auth(server);
@@ -41,4 +42,5 @@ module.exports = (server) => {
   Notification(server);
   Upload(server);
   NewsFeed(server);
+  Profesional(server);
 };

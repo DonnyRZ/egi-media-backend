@@ -6,6 +6,7 @@ const UnauthorizedError = require("./unauthorized_error");
 const BadRequestError = require("./bad_request_error");
 const TooManyRequestsError = require("./too_many_requests_error");
 const UnprocessableEntityError = require("./unprocessable_entity_error");
+const ServiceUnavailableError = require("./service_unavailable_error");
 module.exports = {
   ConflictError,
   ForbiddenError,
@@ -14,5 +15,6 @@ module.exports = {
   UnauthorizedError,
   BadRequestError,
   TooManyRequestsError,
-  UnprocessableEntityError
+  UnprocessableEntityError,
+  ServiceUnavailableError,
 };
