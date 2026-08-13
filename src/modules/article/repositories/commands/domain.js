@@ -433,7 +433,15 @@ class ArticleCommandDomain {
 
   // ─── Update Article Placements (quick edit) ─────────────────────────────────
   async updatePlacements(payload) {
-    const { id, actor_id, actor_role, placements, ip_address, user_agent } = payload;
+    const {
+      id,
+      actor_id,
+      actor_role,
+      placements,
+      headline_position,
+      ip_address,
+      user_agent,
+    } = payload;
 
     const articleExists = await this.query.findArticleExistsById(id);
     if (articleExists.err) {
@@ -446,10 +454,38 @@ class ArticleCommandDomain {
       return wrapper.error(new ForbiddenError("You are not allowed to update this article"));
     }
 
-    const result = await this.command.updateArticlePlacements({ id, placements });
-    if (result.err) {
-      logger.error(ctx, "updatePlacements", "Failed to update placements", result.err);
-      return wrapper.error(result.err);
+    const hasHeadline = Array.isArray(placements) && placements.includes("headline");
+    if (hasHeadline) {
+      if (
+        headline_position == null ||
+        !Number.isInteger(headline_position) ||
+        headline_position < 1 ||
+        headline_position > 5
+      ) {
+        return wrapper.error(
+          new BadRequestError(
+            "headline_position (1-5) is required when Headline placement is selected",
+          ),
+        );
+      }
+    }
+
+    const placementsResult = await this.command.updateArticlePlacements({
+      id,
+      placements,
+    });
+    if (placementsResult.err) {
+      logger.error(ctx, "updatePlacements", "Failed to update placements", placementsResult.err);
+      return wrapper.error(placementsResult.err);
+    }
+
+    const positionResult = await this.command.assignHeadlinePosition({
+      id,
+      position: hasHeadline ? headline_position : null,
+    });
+    if (positionResult.err) {
+      logger.error(ctx, "updatePlacements", "Failed to assign headline position", positionResult.err);
+      return wrapper.error(positionResult.err);
     }
 
     await this.writeAudit({
@@ -467,13 +503,18 @@ class ArticleCommandDomain {
         title: article.title,
         status: article.status,
         placements,
+        headline_position: hasHeadline ? headline_position : null,
       },
       ip_address,
       user_agent,
     });
 
-    logger.info(ctx, "updatePlacements", "Article placements updated", { id, placements });
-    return wrapper.data(result.data);
+    logger.info(ctx, "updatePlacements", "Article placements updated", {
+      id,
+      placements,
+      headline_position: hasHeadline ? headline_position : null,
+    });
+    return wrapper.data(positionResult.data);
   }
 
   // ─── Delete Article (Soft Delete) ───────────────────────────────────────────

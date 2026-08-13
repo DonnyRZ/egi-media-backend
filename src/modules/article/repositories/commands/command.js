@@ -246,21 +246,161 @@ class Command {
 
   async updateArticlePlacements({ id, placements }) {
     try {
+      const nextPlacements = placements ?? [];
       const query = `
         UPDATE articles
         SET placements = $1,
+            headline_position = CASE
+              WHEN NOT ('headline' = ANY($1::text[])) THEN NULL
+              ELSE headline_position
+            END,
             updated_at = NOW()
         WHERE id = $2
           AND deleted_at IS NULL
-        RETURNING id, placements, updated_at
+        RETURNING id, placements, headline_position, updated_at
       `;
-      const result = await this.db.executeQuery(query, [placements ?? [], id]);
+      const result = await this.db.executeQuery(query, [nextPlacements, id]);
       if (!result || result.rowCount === 0) {
         return wrapper.error("Article not found");
       }
       return wrapper.data(result.rows[0]);
     } catch (error) {
       logger.error(ctx, "updateArticlePlacements", "Error updating placements", error);
+      return wrapper.error(error);
+    }
+  }
+
+  /**
+   * Assign headline slot 1-5 with collision shift.
+   * Existing occupants at >= position move up by 1; anything past 5 drops off.
+   * Pass position=null to clear the headline slot.
+   */
+  async assignHeadlinePosition({ id, position }) {
+    try {
+      if (position != null) {
+        const current = await this.db.executeQuery(
+          `
+            SELECT headline_position
+            FROM articles
+            WHERE id = $1 AND deleted_at IS NULL
+            LIMIT 1
+          `,
+          [id],
+        );
+        const currentPos = current?.rows?.[0]?.headline_position ?? null;
+        if (currentPos === position) {
+          const ensure = await this.db.executeQuery(
+            `
+              UPDATE articles
+              SET placements = CASE
+                    WHEN NOT ('headline' = ANY(placements))
+                      THEN array_append(placements, 'headline')
+                    ELSE placements
+                  END,
+                  headline_position = $2,
+                  updated_at = NOW()
+              WHERE id = $1
+                AND deleted_at IS NULL
+              RETURNING id, placements, headline_position, updated_at
+            `,
+            [id, position],
+          );
+          if (!ensure || ensure.rowCount === 0) {
+            return wrapper.error(new InternalServerError("Unable to assign headline position"));
+          }
+          return wrapper.data(ensure.rows[0]);
+        }
+      }
+
+      const queries = [];
+
+      // Free this article's current slot first.
+      queries.push({
+        query: `
+          UPDATE articles
+          SET headline_position = NULL,
+              updated_at = NOW()
+          WHERE id = $1
+            AND deleted_at IS NULL
+        `,
+        values: [id],
+      });
+
+      if (position == null) {
+        queries.push({
+          query: `
+            UPDATE articles
+            SET placements = array_remove(placements, 'headline'),
+                headline_position = NULL,
+                updated_at = NOW()
+            WHERE id = $1
+              AND deleted_at IS NULL
+            RETURNING id, placements, headline_position, updated_at
+          `,
+          values: [id],
+        });
+      } else {
+        // Park colliding rows in a high temp band, then collapse +1.
+        queries.push({
+          query: `
+            UPDATE articles
+            SET headline_position = headline_position + 100,
+                updated_at = NOW()
+            WHERE deleted_at IS NULL
+              AND id <> $1
+              AND headline_position IS NOT NULL
+              AND headline_position >= $2
+          `,
+          values: [id, position],
+        });
+        queries.push({
+          query: `
+            UPDATE articles
+            SET headline_position = headline_position - 99,
+                updated_at = NOW()
+            WHERE deleted_at IS NULL
+              AND headline_position > 100
+          `,
+          values: [],
+        });
+        queries.push({
+          query: `
+            UPDATE articles
+            SET placements = array_remove(placements, 'headline'),
+                headline_position = NULL,
+                updated_at = NOW()
+            WHERE deleted_at IS NULL
+              AND headline_position IS NOT NULL
+              AND headline_position > 5
+          `,
+          values: [],
+        });
+        queries.push({
+          query: `
+            UPDATE articles
+            SET placements = CASE
+                  WHEN NOT ('headline' = ANY(placements))
+                    THEN array_append(placements, 'headline')
+                  ELSE placements
+                END,
+                headline_position = $2,
+                updated_at = NOW()
+            WHERE id = $1
+              AND deleted_at IS NULL
+            RETURNING id, placements, headline_position, updated_at
+          `,
+          values: [id, position],
+        });
+      }
+
+      const results = await this.db.executeTransaction(queries);
+      if (!results) {
+        return wrapper.error(new InternalServerError("Unable to assign headline position"));
+      }
+      const last = results[results.length - 1];
+      return wrapper.data(last?.rows?.[0] ?? { id, headline_position: position });
+    } catch (error) {
+      logger.error(ctx, "assignHeadlinePosition", "Error assigning headline position", error);
       return wrapper.error(error);
     }
   }

@@ -91,6 +91,7 @@ const updatePlacementsParamType = joi.object({
   actor_id: joi.string().uuid().required(),
   actor_role: joi.string().required(),
   placements: placementsSchema.required(),
+  headline_position: joi.number().integer().min(1).max(5).allow(null).optional(),
 });
 
 // ─── Delete Article ───────────────────────────────────────────────────────────
