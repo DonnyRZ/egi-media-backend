@@ -4,7 +4,7 @@ const confidence = require("confidence");
 const config = {
   host: process.env.APP_HOST,
   env: process.env.APP_ENV,
-  port: process.env.APP_PORT,
+  port: process.env.PORT || process.env.APP_PORT,
   frontendUrl: process.env.FE_URL,
   cors: {
     origins: process.env.CORS_ORIGINS || process.env.CORS_ORIGIN,
