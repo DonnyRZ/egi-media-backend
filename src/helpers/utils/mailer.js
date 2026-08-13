@@ -37,7 +37,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendMail({ to, subject, html, bcc }) {
+async function sendMail({ to, subject, html, bcc, replyTo }) {
   if (!hasSmtpConfig) {
     const error = new Error(
       "Email notifications disabled: Missing SMTP environment variables."
@@ -54,6 +54,9 @@ async function sendMail({ to, subject, html, bcc }) {
   };
   if (bcc) {
     payload.bcc = bcc;
+  }
+  if (replyTo) {
+    payload.replyTo = replyTo;
   }
 
   try {

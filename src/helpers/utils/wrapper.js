@@ -7,6 +7,7 @@ const {
   ForbiddenError,
   GatewayTimeoutError,
   ServiceUnavailableError,
+  TooManyRequestsError,
   UnauthorizedError,
   UnprocessableEntityError,
 } = require("../errors");
@@ -93,6 +94,8 @@ const checkErrorCode = (error) => {
       return httpError.NOT_FOUND;
     case ServiceUnavailableError:
       return httpError.SERVICE_UNAVAILABLE;
+    case TooManyRequestsError:
+      return httpError.TOO_MANY_REQUESTS;
     case UnauthorizedError:
       return httpError.UNAUTHORIZED;
     case UnprocessableEntityError:
