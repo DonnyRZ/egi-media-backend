@@ -13,7 +13,7 @@ module.exports = (server) => {
   server.post(
     "/api/v1/uploads",
     verifyToken,
-    verifyRoleName(["author", "superadmin"]),
+    verifyRoleName(["member", "author", "superadmin"]),
     upload.single("file"),
     uploadHandler.uploadFile
   );
