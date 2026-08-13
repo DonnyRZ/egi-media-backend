@@ -85,6 +85,20 @@ async function main() {
   const {
     enqueueColumnTranslation,
   } = require("../src/helpers/utils/columnTranslationEnqueue");
+  const { getConnection } = require("../src/helpers/databases/redis/connection");
+  const redis = getConnection();
+  if (redis.status !== "ready") {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Redis did not become ready")),
+        10000,
+      );
+      redis.once("ready", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
 
   let queued = 0;
   let failed = 0;
