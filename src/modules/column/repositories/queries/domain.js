@@ -50,6 +50,7 @@ class ColumnQueryDomain {
       summary: pickLocalized(row, "summary", locale) || null,
       featured_image: row.featured_image || null,
       status: row.status,
+      translation_status: row.translation_status || "none",
       rejection_reason: row.rejection_reason || null,
       published_at: row.published_at || null,
       created_at: row.created_at,
@@ -98,6 +99,7 @@ class ColumnQueryDomain {
       translations,
       featured_image: row.featured_image || null,
       status: row.status,
+      translation_status: row.translation_status || "none",
       rejection_reason: row.rejection_reason || null,
       reviewed_by: row.reviewed_by || null,
       reviewed_at: row.reviewed_at || null,
@@ -151,8 +153,8 @@ class ColumnQueryDomain {
       return wrapper.error(new NotFoundError("Column not found"));
     }
 
-    // Public detail: only published columns
-    if (columnResult.data.status !== "published") {
+    // Public detail: only published columns with ready translations
+    if (columnResult.data.status !== "published" || columnResult.data.translation_status !== "ready") {
       return wrapper.error(new NotFoundError("Column not found"));
     }
 
@@ -292,7 +294,7 @@ class ColumnQueryDomain {
     if (columnExists.err) {
       return wrapper.error(new NotFoundError("Column not found"));
     }
-    if (columnExists.data.status !== "published") {
+    if (columnExists.data.status !== "published" || columnExists.data.translation_status !== "ready") {
       return wrapper.error(new NotFoundError("Column not found"));
     }
 

@@ -4,6 +4,10 @@ const Query = require("../queries/query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
 const {
+  localesComplete,
+  enqueueColumnTranslation,
+} = require("../../../../helpers/utils/columnTranslationEnqueue");
+const {
   NotFoundError,
   ConflictError,
   BadRequestError,
@@ -75,6 +79,37 @@ class ColumnCommandDomain {
       translationValues[`content_${loc}`] = entry.content;
     }
     return translationValues;
+  }
+
+  async _applyPublishedTranslation({ id, actor_id, source, skipIfInFlight = false }) {
+    if (localesComplete(source)) {
+      const readyResult = await this.command.setTranslationStatus(id, "ready");
+      if (readyResult.err) {
+        logger.error(ctx, "_applyPublishedTranslation", "Failed to mark ready", readyResult.err);
+      }
+      return { translation_status: "ready", queued: false };
+    }
+
+    if (
+      skipIfInFlight &&
+      ["pending", "processing"].includes(source.translation_status)
+    ) {
+      return { translation_status: source.translation_status, queued: false };
+    }
+
+    const enqueueResult = await enqueueColumnTranslation({
+      db: this.db,
+      columnId: id,
+      requestedBy: actor_id,
+      targetStatus: "published",
+    });
+    if (enqueueResult.error) {
+      logger.error(ctx, "_applyPublishedTranslation", "Enqueue failed", enqueueResult.error);
+    }
+    return {
+      translation_status: enqueueResult.queued ? "pending" : "failed",
+      queued: enqueueResult.queued,
+    };
   }
 
   async createColumn(payload) {
@@ -169,6 +204,15 @@ class ColumnCommandDomain {
       return wrapper.error(result.err);
     }
 
+    if (result.data.status === "published") {
+      await this._applyPublishedTranslation({
+        id,
+        actor_id,
+        source: result.data,
+        skipIfInFlight: true,
+      });
+    }
+
     logger.info(ctx, "updateColumn", "Column updated successfully", { id });
     return wrapper.data(result.data);
   }
@@ -254,19 +298,81 @@ class ColumnCommandDomain {
       return wrapper.error(result.err);
     }
 
+    const translation = await this._applyPublishedTranslation({
+      id,
+      actor_id,
+      source: column,
+    });
+
     await this.writeAudit({
       user_id: actor_id,
       record_id: id,
       action: "PUBLISHED",
       article_title: column.title,
       old_data: { status: column.status, article_title: column.title },
-      new_data: { status: "published", article_title: column.title },
+      new_data: {
+        status: "published",
+        article_title: column.title,
+        translation_status: translation.translation_status,
+      },
       ip_address,
       user_agent,
     });
 
-    logger.info(ctx, "approveColumn", "Column approved", { id });
-    return wrapper.data(result.data);
+    logger.info(ctx, "approveColumn", "Column approved", {
+      id,
+      translation_status: translation.translation_status,
+    });
+    return wrapper.data({
+      ...result.data,
+      translation_status: translation.translation_status,
+    });
+  }
+
+  async retryTranslate(payload) {
+    const { id, actor_id, actor_role } = payload;
+
+    const columnExists = await this.query.findColumnExistsById(id);
+    if (columnExists.err) {
+      return wrapper.error(new NotFoundError("Column not found"));
+    }
+
+    const column = columnExists.data;
+    if (actor_role !== "superadmin" && column.author_id !== actor_id) {
+      return wrapper.error(
+        new ForbiddenError("You are not allowed to retry translation for this column")
+      );
+    }
+
+    if (column.translation_status !== "failed") {
+      return wrapper.error(
+        new BadRequestError("Retry is only available when translation_status is failed")
+      );
+    }
+
+    if (column.status !== "published") {
+      return wrapper.error(
+        new BadRequestError("Column must be published to translate")
+      );
+    }
+
+    const enqueueResult = await enqueueColumnTranslation({
+      db: this.db,
+      columnId: id,
+      requestedBy: actor_id,
+      targetStatus: "published",
+    });
+
+    if (enqueueResult.error) {
+      return wrapper.error(new BadRequestError(enqueueResult.error));
+    }
+
+    logger.info(ctx, "retryTranslate", "Translation re-queued", { id, jobId: enqueueResult.jobId });
+    return wrapper.data({
+      column_id: id,
+      job_id: enqueueResult.jobId,
+      translation_status: "pending",
+    });
   }
 
   async rejectColumn(payload) {
@@ -329,6 +435,9 @@ class ColumnCommandDomain {
     if (columnExists.data.status !== "published") {
       return wrapper.error(new BadRequestError("Only published columns can be saved"));
     }
+    if (columnExists.data.translation_status !== "ready") {
+      return wrapper.error(new BadRequestError("Column translations are not ready"));
+    }
 
     const savedRecord = await this.query.findSavedRecord(user_id, column_id);
     if (!savedRecord.err) {
@@ -369,6 +478,9 @@ class ColumnCommandDomain {
     if (columnExists.data.status !== "published") {
       return wrapper.error(new BadRequestError("Only published columns can be shared"));
     }
+    if (columnExists.data.translation_status !== "ready") {
+      return wrapper.error(new BadRequestError("Column translations are not ready"));
+    }
 
     const shareId = uuidv4();
     const result = await this.command.insertColumnShare({
@@ -394,6 +506,9 @@ class ColumnCommandDomain {
     }
     if (columnExists.data.status !== "published") {
       return wrapper.error(new BadRequestError("Only published columns can be viewed"));
+    }
+    if (columnExists.data.translation_status !== "ready") {
+      return wrapper.error(new BadRequestError("Column translations are not ready"));
     }
 
     const viewId = uuidv4();
@@ -421,6 +536,9 @@ class ColumnCommandDomain {
     }
     if (columnExists.data.status !== "published") {
       return wrapper.error(new BadRequestError("Only published columns can be commented on"));
+    }
+    if (columnExists.data.translation_status !== "ready") {
+      return wrapper.error(new BadRequestError("Column translations are not ready"));
     }
 
     if (parent_id) {

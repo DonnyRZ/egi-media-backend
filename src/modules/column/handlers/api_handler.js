@@ -205,6 +205,18 @@ const rejectColumn = async (req, res) => {
   return sendResponse(result, res);
 };
 
+const retryTranslate = async (req, res) => {
+  const payload = {
+    id: req.params.id,
+    actor_id: req.userMeta?.id,
+    actor_role: req.userMeta?.role,
+  };
+  const validatePayload = validator.isValidPayload(payload, commandModel.retryTranslateParamType);
+  if (validatePayload.err) return sendResponse(validatePayload, res);
+  const result = await commandHandler.retryTranslate(validatePayload.data);
+  return sendResponse(result, res);
+};
+
 const recordColumnView = async (req, res) => {
   const payload = {
     id: req.params.id,
@@ -304,6 +316,7 @@ module.exports = {
   submitColumn,
   approveColumn,
   rejectColumn,
+  retryTranslate,
   recordColumnView,
   shareColumn,
   saveColumn,

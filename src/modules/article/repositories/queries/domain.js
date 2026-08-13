@@ -447,6 +447,9 @@ class ArticleQueryDomain {
 
     const items = (result.data || []).map((row) => ({
       id: row.id,
+      entity_type: row.entity_type || "article",
+      entity_id: row.entity_id || row.article_id,
+      entity_title: row.entity_title || row.article_title,
       article_id: row.article_id,
       article_title: row.article_title,
       requested_by: row.requested_by,
@@ -455,6 +458,7 @@ class ArticleQueryDomain {
       error_message: row.error_message || null,
       translation_status: row.translation_status,
       article_status: row.article_status,
+      entity_status: row.entity_status || row.article_status,
       created_at: row.created_at,
       started_at: row.started_at || null,
       finished_at: row.finished_at || null,

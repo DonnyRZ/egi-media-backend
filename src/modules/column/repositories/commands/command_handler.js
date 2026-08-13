@@ -10,6 +10,7 @@ const deleteColumn = async (payload) => domain.deleteColumn(payload);
 const submitColumn = async (payload) => domain.submitColumn(payload);
 const approveColumn = async (payload) => domain.approveColumn(payload);
 const rejectColumn = async (payload) => domain.rejectColumn(payload);
+const retryTranslate = async (payload) => domain.retryTranslate(payload);
 const saveColumn = async (payload) => domain.saveColumn(payload);
 const unsaveColumn = async (payload) => domain.unsaveColumn(payload);
 const shareColumn = async (payload) => domain.shareColumn(payload);
@@ -24,6 +25,7 @@ module.exports = {
   submitColumn,
   approveColumn,
   rejectColumn,
+  retryTranslate,
   saveColumn,
   unsaveColumn,
   shareColumn,

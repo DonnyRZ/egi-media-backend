@@ -960,30 +960,59 @@ class Query {
   async findTranslationJobs({ user_id, is_superadmin, limit = 30 }) {
     try {
       const values = [];
-      let where = "WHERE 1=1";
+      let requesterFilter = "";
       if (!is_superadmin) {
         values.push(user_id);
-        where = `WHERE j.requested_by = $${values.length}`;
+        requesterFilter = `AND j.requested_by = $${values.length}`;
       }
       values.push(limit);
       const query = `
-        SELECT
-          j.id,
-          j.article_id,
-          j.requested_by,
-          j.target_status,
-          j.job_status,
-          j.error_message,
-          j.created_at,
-          j.started_at,
-          j.finished_at,
-          a.title AS article_title,
-          a.translation_status,
-          a.status AS article_status
-        FROM article_translation_jobs j
-        INNER JOIN articles a ON a.id = j.article_id AND a.deleted_at IS NULL
-        ${where}
-        ORDER BY j.created_at DESC
+        SELECT * FROM (
+          SELECT
+            j.id,
+            'article'::text AS entity_type,
+            j.article_id AS entity_id,
+            j.article_id,
+            j.requested_by,
+            j.target_status,
+            j.job_status,
+            j.error_message,
+            j.created_at,
+            j.started_at,
+            j.finished_at,
+            a.title AS entity_title,
+            a.title AS article_title,
+            a.translation_status,
+            a.status AS entity_status,
+            a.status AS article_status
+          FROM article_translation_jobs j
+          INNER JOIN articles a ON a.id = j.article_id AND a.deleted_at IS NULL
+          WHERE 1=1 ${requesterFilter}
+
+          UNION ALL
+
+          SELECT
+            j.id,
+            'column'::text AS entity_type,
+            j.column_id AS entity_id,
+            j.column_id AS article_id,
+            j.requested_by,
+            j.target_status,
+            j.job_status,
+            j.error_message,
+            j.created_at,
+            j.started_at,
+            j.finished_at,
+            c.title AS entity_title,
+            c.title AS article_title,
+            c.translation_status,
+            c.status AS entity_status,
+            c.status AS article_status
+          FROM column_translation_jobs j
+          INNER JOIN "columns" c ON c.id = j.column_id AND c.deleted_at IS NULL
+          WHERE 1=1 ${requesterFilter}
+        ) jobs
+        ORDER BY created_at DESC
         LIMIT $${values.length}
       `;
       const result = await this.db.executeQuery(query, values);

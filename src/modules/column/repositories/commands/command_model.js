@@ -111,6 +111,12 @@ const deleteCommentParamType = joi.object({
   actor_role: joi.string().required(),
 });
 
+const retryTranslateParamType = joi.object({
+  id: joi.string().uuid().required(),
+  actor_id: joi.string().uuid().required(),
+  actor_role: joi.string().required(),
+});
+
 module.exports = {
   createColumnParamType,
   updateColumnParamType,
@@ -118,6 +124,7 @@ module.exports = {
   submitColumnParamType,
   approveColumnParamType,
   rejectColumnParamType,
+  retryTranslateParamType,
   saveColumnParamType,
   shareColumnParamType,
   recordColumnViewParamType,

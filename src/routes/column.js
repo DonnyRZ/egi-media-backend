@@ -90,4 +90,10 @@ module.exports = (server) => {
     verifyRoleName(["superadmin"]),
     columnHandler.rejectColumn
   );
+  server.post(
+    "/api/v1/columns/:id/translate/retry",
+    verifyToken,
+    verifyRoleName(writerRoles),
+    columnHandler.retryTranslate
+  );
 };

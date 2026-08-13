@@ -42,7 +42,7 @@ class Command {
           id, author_id, title, slug, summary, content, featured_image,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
-          status, rejection_reason, reviewed_by, reviewed_at, published_at,
+          status, translation_status, rejection_reason, reviewed_by, reviewed_at, published_at,
           created_at, updated_at
       `;
 
@@ -115,7 +115,7 @@ class Command {
           id, author_id, title, slug, summary, content, featured_image,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
-          status, rejection_reason, reviewed_by, reviewed_at, published_at,
+          status, translation_status, rejection_reason, reviewed_by, reviewed_at, published_at,
           created_at, updated_at
       `;
 
@@ -178,6 +178,27 @@ class Command {
       return wrapper.data(result.rows[0]);
     } catch (error) {
       logger.error(ctx, "updateColumnReview", "Error updating column review", error);
+      return wrapper.error(error);
+    }
+  }
+
+  async setTranslationStatus(id, translation_status) {
+    try {
+      const query = `
+        UPDATE "columns"
+        SET translation_status = $1,
+            updated_at = NOW()
+        WHERE id = $2
+          AND deleted_at IS NULL
+        RETURNING id, translation_status, updated_at
+      `;
+      const result = await this.db.executeQuery(query, [translation_status, id]);
+      if (!result || result.rowCount === 0) {
+        return wrapper.error("Column not found");
+      }
+      return wrapper.data(result.rows[0]);
+    } catch (error) {
+      logger.error(ctx, "setTranslationStatus", "Error updating translation status", error);
       return wrapper.error(error);
     }
   }

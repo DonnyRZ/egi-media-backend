@@ -10,7 +10,10 @@ class Query {
   async findColumnExistsById(id) {
     try {
       const query = `
-        SELECT id, author_id, status, title
+        SELECT id, author_id, status, title, summary, content,
+               title_en, content_en, summary_en,
+               title_uz, content_uz, summary_uz,
+               translation_status
         FROM "columns"
         WHERE id = $1
           AND deleted_at IS NULL
@@ -82,6 +85,7 @@ class Query {
       c.summary_uz,
       c.featured_image,
       c.status,
+      c.translation_status,
       c.rejection_reason,
       c.published_at,
       c.created_at,
@@ -177,7 +181,7 @@ class Query {
   async findAllPublishedColumns({ page, limit, search, author_id, sort }) {
     try {
       const offset = (page - 1) * limit;
-      const conditions = ["c.deleted_at IS NULL", "c.status = 'published'"];
+      const conditions = ["c.deleted_at IS NULL", "c.status = 'published'", "c.translation_status = 'ready'"];
       const values = [];
       let idx = 1;
 
@@ -225,7 +229,7 @@ class Query {
 
   async countAllPublishedColumns({ search, author_id }) {
     try {
-      const conditions = ["c.deleted_at IS NULL", "c.status = 'published'"];
+      const conditions = ["c.deleted_at IS NULL", "c.status = 'published'", "c.translation_status = 'ready'"];
       const values = [];
       let idx = 1;
 
@@ -357,6 +361,7 @@ class Query {
         WHERE sc.user_id = $1
           AND c.deleted_at IS NULL
           AND c.status = 'published'
+          AND c.translation_status = 'ready'
         ORDER BY sc.created_at DESC
         LIMIT $2 OFFSET $3
       `;
@@ -377,6 +382,7 @@ class Query {
         WHERE sc.user_id = $1
           AND c.deleted_at IS NULL
           AND c.status = 'published'
+          AND c.translation_status = 'ready'
       `;
       const result = await this.db.executeQuery(query, [user_id]);
       return wrapper.data(result?.rows?.[0]?.total || 0);
@@ -394,7 +400,7 @@ class Query {
           c.title, c.slug, c.summary, c.content,
           c.title_en, c.slug_en, c.summary_en, c.content_en,
           c.title_uz, c.slug_uz, c.summary_uz, c.content_uz,
-          c.featured_image, c.status, c.rejection_reason,
+          c.featured_image, c.status, c.translation_status, c.rejection_reason,
           c.reviewed_by, c.reviewed_at, c.published_at,
           c.created_at, c.updated_at,
           u.id AS author_id,
@@ -430,7 +436,7 @@ class Query {
           c.title, c.slug, c.summary, c.content,
           c.title_en, c.slug_en, c.summary_en, c.content_en,
           c.title_uz, c.slug_uz, c.summary_uz, c.content_uz,
-          c.featured_image, c.status, c.rejection_reason,
+          c.featured_image, c.status, c.translation_status, c.rejection_reason,
           c.reviewed_by, c.reviewed_at, c.published_at,
           c.created_at, c.updated_at,
           u.id AS author_id,
@@ -445,6 +451,7 @@ class Query {
         INNER JOIN users u ON u.id = c.author_id
         WHERE (c.slug = $1 OR c.slug_en = $1 OR c.slug_uz = $1)
           AND c.status = 'published'
+          AND c.translation_status = 'ready'
           AND c.deleted_at IS NULL
         LIMIT 1
       `;

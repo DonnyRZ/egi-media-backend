@@ -9,6 +9,7 @@ const pgConnectionPool = require("../helpers/databases/postgresql/connection");
 const redisConnection = require("../helpers/databases/redis/connection");
 const emailWorker = require("../helpers/queues/email.worker");
 const articleTranslationWorker = require("../helpers/queues/article-translation.worker");
+const columnTranslationWorker = require("../helpers/queues/column-translation.worker");
 const passport = require("passport");
 const swaggerUi = require("swagger-ui-express");
 const fs = require("fs");
@@ -35,6 +36,7 @@ class AppServer {
     redisConnection.init();
     emailWorker.start();
     articleTranslationWorker.start();
+    columnTranslationWorker.start();
   }
 
 
