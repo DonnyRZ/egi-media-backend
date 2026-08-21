@@ -35,8 +35,13 @@ echo "staging backend current: ${NEW}"
 
 npm ci
 
-if [ -f scripts/run-youtube-video-review-migration.js ]; then
-  node scripts/run-youtube-video-review-migration.js
+if [ -f src/migrations/031_youtube_video_review.sql ]; then
+  if sudo -n -u postgres psql -d egi_media -c "SELECT 1" >/dev/null 2>&1; then
+    sudo -u postgres psql -d egi_media -v ON_ERROR_STOP=1 \
+      -f src/migrations/031_youtube_video_review.sql
+  else
+    node scripts/run-youtube-video-review-migration.js
+  fi
 fi
 
 systemctl restart "${SERVICE}"
