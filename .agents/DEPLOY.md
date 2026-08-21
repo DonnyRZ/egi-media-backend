@@ -26,17 +26,17 @@ Pada setiap push ke `develop`:
 Script di VPS: `scripts/deploy-staging.sh`.  
 Tidak mengubah `.env` / `src/config`, tidak `git reset --hard`, tidak menyentuh `be-prod`.
 
-## GitHub secrets (sekali)
+Cadangan: systemd timer `egi-media-cms-backend-sync` mem-poll `origin/develop` tiap ~60 detik.
 
-Di repo backend: Settings → Environments → `staging` → Secrets:
+## GitHub secrets (repo, bukan environment)
 
 | Secret | Isi |
 |---|---|
 | `STAGING_SSH_HOST` | `212.85.24.238` |
 | `STAGING_SSH_USER` | `root` |
-| `STAGING_SSH_KEY` | Isi **private** key yang public key-nya sudah ada di VPS |
+| `STAGING_SSH_KEY` | Private key yang public key-nya sudah ada di VPS |
 
-Isi secret **sebelum** merge PR CI ke `develop`.
+Tanpa `STAGING_SSH_KEY`, job GitHub Actions di-skip. Timer VPS tetap men-deploy.
 
 ## Migration
 
