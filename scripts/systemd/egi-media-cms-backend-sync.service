@@ -1,0 +1,10 @@
+[Unit]
+Description=EGI Media CMS backend staging sync from develop
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/egi-media/cms/backend
+ExecStart=/bin/bash /var/www/egi-media/cms/backend/scripts/deploy-staging.sh
+Nice=10

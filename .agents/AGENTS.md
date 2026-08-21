@@ -279,6 +279,7 @@ fix/nama-perbaikan
 refactor/nama-refactor
 docs/nama-dokumentasi
 chore/nama-task
+ci/nama-ci
 ```
 
 AI tidak boleh bekerja langsung pada branch `develop`.
@@ -331,6 +332,8 @@ AI tidak boleh melakukan push ke branch `develop`.
 Push hanya dilakukan ke branch feature.
 
 Merge ke `develop` hanya melalui Pull Request setelah proses review.
+
+Staging API ter-deploy otomatis dari `develop`. Lihat `.agents/DEPLOY.md`. Jangan deploy production dari `develop`.
 
 ---
 
