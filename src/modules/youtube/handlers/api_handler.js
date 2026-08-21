@@ -21,10 +21,21 @@ const getYoutubeVideo = async (req, res) => {
   return sendResponse(await queryHandler.getYoutubeVideo(payload.data), res);
 };
 
+const withActor = (req, data) => ({
+  ...data,
+  actor_id: req.userMeta?.id,
+  actor_role: req.userMeta?.role,
+  actor_name: req.userMeta?.full_name,
+});
+
 const addYoutubeVideo = async (req, res) => {
   const payload = validator.isValidPayload(req.body, commandModel.createVideoParamType);
   if (payload.err) return sendResponse(payload, res);
-  return sendResponse(await commandHandler.addYoutubeVideo(payload.data), res, SUCCESS.CREATED);
+  return sendResponse(
+    await commandHandler.addYoutubeVideo(withActor(req, payload.data)),
+    res,
+    SUCCESS.CREATED
+  );
 };
 
 const updateYoutubeVideo = async (req, res) => {
@@ -33,13 +44,19 @@ const updateYoutubeVideo = async (req, res) => {
     commandModel.updateVideoParamType
   );
   if (payload.err) return sendResponse(payload, res);
-  return sendResponse(await commandHandler.updateYoutubeVideo(payload.data), res);
+  return sendResponse(
+    await commandHandler.updateYoutubeVideo(withActor(req, payload.data)),
+    res
+  );
 };
 
 const deleteYoutubeVideo = async (req, res) => {
   const payload = validator.isValidPayload(req.params, commandModel.deleteVideoParamType);
   if (payload.err) return sendResponse(payload, res);
-  return sendResponse(await commandHandler.deleteYoutubeVideo(payload.data), res);
+  return sendResponse(
+    await commandHandler.deleteYoutubeVideo(withActor(req, payload.data)),
+    res
+  );
 };
 
 module.exports = {

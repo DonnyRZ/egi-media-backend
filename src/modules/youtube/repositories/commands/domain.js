@@ -2,9 +2,40 @@ const { randomUUID } = require("crypto");
 const Command = require("./command");
 const Query = require("../queries/query");
 const wrapper = require("../../../../helpers/utils/wrapper");
-const { InternalServerError, NotFoundError } = require("../../../../helpers/errors");
+const { notifyEditorsOfSubmission } = require("../../../../helpers/utils/reviewNotifier");
+const {
+  InternalServerError,
+  NotFoundError,
+  ForbiddenError,
+} = require("../../../../helpers/errors");
 
 const TRANSLATION_LOCALES = ["en", "uz"];
+const ELEVATED_ROLES = new Set(["superadmin", "admin"]);
+
+const isElevatedRole = (role) => ELEVATED_ROLES.has(role);
+
+const canMutateVideo = (video, actorId, actorRole) =>
+  isElevatedRole(actorRole) || Boolean(actorId && video.author_id === actorId);
+
+const resolveCreateVisibility = (actorRole, requestedActive) => {
+  if (isElevatedRole(actorRole) && requestedActive !== false) {
+    return { status: "published", is_active: true };
+  }
+  return { status: "review", is_active: false };
+};
+
+const resolveUpdateVisibility = (actorRole, requestedActive, current) => {
+  if (!isElevatedRole(actorRole)) {
+    return {
+      status: current.status || "review",
+      is_active: current.is_active === true,
+    };
+  }
+  if (requestedActive === false) {
+    return { status: "review", is_active: false };
+  }
+  return { status: "published", is_active: true };
+};
 
 const buildTranslationValues = (translations, { patch = false } = {}) => {
   const translationValues = {};
@@ -29,19 +60,23 @@ const buildTranslationValues = (translations, { patch = false } = {}) => {
 
 class YoutubeCommandDomain {
   constructor(db) {
+    this.db = db;
     this.command = new Command(db);
     this.query = new Query(db);
   }
 
   async addYoutubeVideo(payload) {
     const { translationValues } = buildTranslationValues(payload.translations);
+    const visibility = resolveCreateVisibility(payload.actor_role, payload.is_active);
 
     const result = await this.command.insertOne({
       id: randomUUID(),
       title: payload.title,
       description: payload.description || null,
       url: payload.url,
-      is_active: payload.is_active !== false,
+      is_active: visibility.is_active,
+      author_id: payload.actor_id || null,
+      status: visibility.status,
       created_at: new Date(),
       title_en: translationValues.title_en ?? null,
       description_en: translationValues.description_en ?? null,
@@ -51,6 +86,17 @@ class YoutubeCommandDomain {
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to add YouTube video"));
     }
+
+    if (!isElevatedRole(payload.actor_role)) {
+      void notifyEditorsOfSubmission({
+        db: this.db,
+        actorId: payload.actor_id,
+        actorName: payload.actor_name,
+        resourceLabel: "video",
+        title: payload.title,
+      });
+    }
+
     return wrapper.data(result.rows[0]);
   }
 
@@ -63,6 +109,16 @@ class YoutubeCommandDomain {
       return wrapper.error(new NotFoundError("YouTube video not found"));
     }
 
+    const video = current.rows[0];
+    if (!canMutateVideo(video, payload.actor_id, payload.actor_role)) {
+      return wrapper.error(new ForbiddenError("You are not allowed to update this video"));
+    }
+
+    const visibility = resolveUpdateVisibility(
+      payload.actor_role,
+      payload.is_active,
+      video
+    );
     const { translationValues, updatedTranslationFields } = buildTranslationValues(
       payload.translations,
       { patch: true }
@@ -73,7 +129,8 @@ class YoutubeCommandDomain {
       title: payload.title,
       description: payload.description || null,
       url: payload.url,
-      is_active: payload.is_active !== false,
+      is_active: visibility.is_active,
+      status: visibility.status,
       translationValues,
       updatedTranslationFields,
     });
@@ -83,13 +140,17 @@ class YoutubeCommandDomain {
     return wrapper.data(result.rows[0]);
   }
 
-  async deleteYoutubeVideo({ id }) {
+  async deleteYoutubeVideo({ id, actor_id, actor_role }) {
     const current = await this.query.findOneById(id);
     if (!current) {
       return wrapper.error(new InternalServerError("Unable to validate YouTube video"));
     }
     if (current.rows.length === 0) {
       return wrapper.error(new NotFoundError("YouTube video not found"));
+    }
+
+    if (!canMutateVideo(current.rows[0], actor_id, actor_role)) {
+      return wrapper.error(new ForbiddenError("You are not allowed to delete this video"));
     }
 
     const result = await this.command.deleteOne(id);

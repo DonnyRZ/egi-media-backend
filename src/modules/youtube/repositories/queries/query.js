@@ -1,7 +1,7 @@
 const collection = "youtube_videos";
 
 const SELECT_COLUMNS = `
-  id, title, description, url, is_active,
+  id, title, description, url, is_active, author_id, status,
   title_en, description_en, title_uz, description_uz,
   created_at
 `;
