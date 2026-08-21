@@ -1,0 +1,13 @@
+---
+description: Git workflow and staging auto-deploy for EGI Media backend
+alwaysApply: true
+---
+
+# Git + staging deploy
+
+- Never commit or push to `develop` or `main`. Work on `feature/*`, `fix/*`, or `ci/*` created from updated `develop`.
+- Ship via Pull Request into `develop`. Merging `develop` auto-deploys **staging only** through `.github/workflows/deploy-staging.yml`.
+- Do not SSH to the VPS to pull a feature branch. Do not restart `be-prod` or touch production.
+- Staging lives at `/var/www/egi-media/cms/backend`, systemd `egi-media-cms-backend`. Never edit `.env` or secrets.
+- Deploy script: `scripts/deploy-staging.sh` (`git pull --ff-only`, `npm ci`, idempotent migrations, restart). No `git reset --hard`.
+- New tables/columns need migration + rollback. Full runbook: `.agents/DEPLOY.md`.
