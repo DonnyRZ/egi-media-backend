@@ -11,6 +11,7 @@ const {
   ForbiddenError,
 } = require("../../../../helpers/errors");
 const { notifyTopicSubscribersOnPublish } = require("../../../../helpers/utils/topicPublishNotifier");
+const { notifyEditorsOfSubmission } = require("../../../../helpers/utils/reviewNotifier");
 const { translateArticle } = require("../../../../services/aiTranslation");
 const {
   localesComplete,
@@ -245,6 +246,15 @@ class ArticleCommandDomain {
 
     logger.info(ctx, "createArticle", "Article created successfully", { id });
 
+    if (finalStatus === "review") {
+      void notifyEditorsOfSubmission({
+        db: this.db,
+        actorId: author_id,
+        resourceLabel: "article",
+        title,
+      });
+    }
+
     if (isAiTranslationStatus(finalStatus) && translationStatus === "pending") {
       await enqueueArticleTranslation({
         db: this.db,
@@ -408,6 +418,15 @@ class ArticleCommandDomain {
     });
 
     logger.info(ctx, "updateArticle", "Article updated successfully", { id });
+
+    if (article.status !== "review" && nextStatus === "review") {
+      void notifyEditorsOfSubmission({
+        db: this.db,
+        actorId: actor_id,
+        resourceLabel: "article",
+        title: title ?? article.title,
+      });
+    }
 
     if (nextTranslationStatus === "pending") {
       await enqueueArticleTranslation({
@@ -677,6 +696,15 @@ class ArticleCommandDomain {
       auditAction,
       translationStatus,
     });
+
+    if (status === "review" && article.status !== "review") {
+      void notifyEditorsOfSubmission({
+        db: this.db,
+        actorId: actor_id,
+        resourceLabel: "article",
+        title: article.title,
+      });
+    }
 
     if (shouldEnqueue) {
       await enqueueArticleTranslation({
