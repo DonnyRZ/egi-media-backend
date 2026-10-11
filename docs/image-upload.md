@@ -7,6 +7,7 @@
 - Local storage writes to a hidden temporary file and atomically renames it only after the complete buffer is written. Failed temporary files are removed. Existing completed images remain intact if writing fails.
 - Upload logs record size, format, storage, duration and safe error codes; they omit authentication credentials and file content.
 - R2 remains optional. This release works with persistent VPS local storage and does not require a bucket.
+- The versioned Nginx templates in `ops/nginx/` scope the request body limit to 6 MiB (including multipart overhead), allow 120 seconds between body reads, and record upload request duration and length without credentials or request body. Install the log format in the HTTP context and include the location snippet in the CMS HTTPS server block; validate with `nginx -t` before reload.
 - The translation jobs query casts both article and column status enums to text before UNION ALL, correcting the PostgreSQL 42846 error observed during the upload audit.
 
 Run `npm ci` and `npm run test:upload` before release. The focused suite runs an isolated loopback Express server, preserves real role checks, and verifies duplicate retries, boundary size, invalid MIME, malformed input and atomic local storage. It mocks authentication and storage for route tests; production verification must also check real login, role authorization, public image access and translation jobs.
