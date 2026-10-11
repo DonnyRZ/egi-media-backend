@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -f /etc/egi-media/production ]; then
+  echo "This VPS serves production. Staging deploy is disabled; deploy a reviewed main release."
+  exit 1
+fi
+
 APP_DIR="/var/www/egi-media/cms/backend"
 BRANCH="develop"
 SERVICE="egi-media-cms-backend"

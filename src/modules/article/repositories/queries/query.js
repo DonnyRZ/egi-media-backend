@@ -983,8 +983,8 @@ class Query {
             a.title AS entity_title,
             a.title AS article_title,
             a.translation_status,
-            a.status AS entity_status,
-            a.status AS article_status
+            a.status::text AS entity_status,
+            a.status::text AS article_status
           FROM article_translation_jobs j
           INNER JOIN articles a ON a.id = j.article_id AND a.deleted_at IS NULL
           WHERE 1=1 ${requesterFilter}
@@ -1006,8 +1006,8 @@ class Query {
             c.title AS entity_title,
             c.title AS article_title,
             c.translation_status,
-            c.status AS entity_status,
-            c.status AS article_status
+            c.status::text AS entity_status,
+            c.status::text AS article_status
           FROM column_translation_jobs j
           INNER JOIN "columns" c ON c.id = j.column_id AND c.deleted_at IS NULL
           WHERE 1=1 ${requesterFilter}

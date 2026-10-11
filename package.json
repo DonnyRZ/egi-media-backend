@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "test:upload": "node --test tests/upload.test.cjs",
     "start": "node index.js",
     "dev": "nodemon index.js",
     "swagger": "node swagger.js && node format-swagger.js"

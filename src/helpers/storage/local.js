@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { randomUUID } = require("crypto");
 const config = require("../../config/global_config");
 
 const UPLOAD_ROOT = path.resolve(__dirname, "../../../uploads");
@@ -21,8 +22,6 @@ const uploadObject = async ({ buffer, key }) => {
 
   const absolutePath = path.join(UPLOAD_ROOT, safeKey);
   ensureDir(path.dirname(absolutePath));
-  await fs.promises.writeFile(absolutePath, buffer);
-
   const publicBase = String(
     process.env.UPLOAD_PUBLIC_BASE_URL ||
       config.get("/frontendUrl") ||
@@ -34,6 +33,17 @@ const uploadObject = async ({ buffer, key }) => {
     .replace(/\/+$/, "");
   if (!publicBase) {
     throw new Error("UPLOAD_PUBLIC_BASE_URL, FE_URL, or APP_HOST is required for local upload URLs");
+  }
+
+  // Publish complete files atomically; retries must not expose partial images.
+  const temporaryPath = path.join(path.dirname(absolutePath), `.${path.basename(absolutePath)}.${randomUUID()}.tmp`);
+  try {
+    await fs.promises.writeFile(temporaryPath, buffer, { flag: "wx" });
+    await fs.promises.rename(temporaryPath, absolutePath);
+  } finally {
+    await fs.promises.unlink(temporaryPath).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
   }
 
   return `${publicBase}/uploads/${safeKey.replace(/\\/g, "/")}`;
