@@ -85,8 +85,7 @@ class Auth {
     // Always log the verify URL so local/dev can complete verification without SMTP/Redis.
     logger.info(ctx, "register", "Email verification token generated", {
       userId,
-      verificationToken,
-      verifyUrl,
+      ...(process.env.NODE_ENV !== "production" ? { verificationToken, verifyUrl } : {}),
     });
 
     // Fire-and-forget: never block registration on mail delivery.
@@ -306,8 +305,7 @@ class Auth {
     // Always log the reset URL so local/dev can complete reset without SMTP/Redis.
     logger.info(ctx, "forgotPassword", "Password reset token generated", {
       userId: user.id,
-      resetToken,
-      resetUrl,
+      ...(process.env.NODE_ENV !== "production" ? { resetToken, resetUrl } : {}),
     });
 
     // Fire-and-forget: never block the response on mail delivery.
@@ -534,8 +532,7 @@ class Auth {
     logger.info(ctx, "resendVerification", "Email verification token resent", {
       userId: user.id,
       email,
-      verificationToken,
-      verifyUrl,
+      ...(process.env.NODE_ENV !== "production" ? { verificationToken, verifyUrl } : {}),
     });
 
     void addEmailJob({

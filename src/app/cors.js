@@ -3,7 +3,7 @@ const config = require("../config/global_config");
 
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowed = String(config.get("/cors/origins")).split(",");
+    const allowed = String(config.get("/cors/origins") || "").split(",").map(value => value.trim()).filter(Boolean);
 
     // DEV MODE → allow all
     if (process.env.NODE_ENV !== "production") {
@@ -16,7 +16,7 @@ const corsOptions = {
     }
 
     // Browser origin check
-    if (allowed.includes("*") || allowed.includes(origin)) {
+    if (allowed.includes(origin)) {
       return callback(null, true);
     }
 

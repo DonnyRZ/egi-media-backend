@@ -1,4 +1,4 @@
-const AWS = require("aws-sdk");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const config = require("../../config/global_config");
 
 const r2 = config.get("/r2BucketAuth");
@@ -7,13 +7,14 @@ const r2 = config.get("/r2BucketAuth");
 let client = null;
 const getClient = () => {
   if (client) return client;
-  client = new AWS.S3({
+  client = new S3Client({
     endpoint: r2.enpS3Client,
-    accessKeyId: r2.accS3User,
-    secretAccessKey: r2.secS3User,
+    credentials: {
+      accessKeyId: r2.accS3User,
+      secretAccessKey: r2.secS3User,
+    },
     region: "auto",
-    signatureVersion: "v4",
-    s3ForcePathStyle: true,
+    forcePathStyle: true,
   });
   return client;
 };
@@ -51,14 +52,12 @@ const isConfigured = () =>
  * @returns {Promise<string>} public object URL
  */
 const uploadObject = async ({ buffer, key, contentType }) => {
-  await getClient()
-    .putObject({
+  await getClient().send(new PutObjectCommand({
       Bucket: r2.bucketName,
       Key: key,
       Body: buffer,
       ContentType: contentType,
-    })
-    .promise();
+    }));
 
   const base = r2.publicBaseUrl
     ? String(r2.publicBaseUrl).replace(/\/+$/, "")
@@ -68,3 +67,4 @@ const uploadObject = async ({ buffer, key, contentType }) => {
 };
 
 module.exports = { uploadObject, isConfigured };
+

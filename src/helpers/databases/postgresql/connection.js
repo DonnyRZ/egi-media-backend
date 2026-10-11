@@ -32,6 +32,7 @@ const init = async (pgConfig) => {
             return;
           }
         });
+        client.release();
         resolve(pool);
         return;
       });

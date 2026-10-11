@@ -17,13 +17,15 @@ const fs = require("fs");
 class AppServer {
   constructor() {
     this.server = express();
+    this.server.disable("x-powered-by");
+    this.server.set("trust proxy", "loopback");
     this.server.use(cors);
     this.port = config.get("/port");
 
     this._middlewares();
     this._routes();
     this.server.use(express.urlencoded({ extended: true }));
-    // Local upload fallback when Cloudflare R2 is not configured (demo/staging).
+    // Local upload fallback when Cloudflare R2 is not configured (persistent local storage).
     this.server.use(
       "/uploads",
       express.static(path.join(__dirname, "../../uploads"), {
@@ -59,7 +61,7 @@ class AppServer {
     });
 
     // Swagger UI
-    try {
+    if (process.env.NODE_ENV !== "production") try {
       const swaggerFile = JSON.parse(fs.readFileSync(path.join(__dirname, "../../swagger_output.json"), 'utf8'));
       this.server.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
     } catch (err) {
@@ -70,7 +72,7 @@ class AppServer {
   }
 
   listen() {
-    this.server.listen(this.port, () => {
+    this.server.listen(this.port, process.env.APP_BIND_HOST || "127.0.0.1", () => {
       console.log("\n", __dirname);
       console.log(`🚀 Server running at http://localhost:${this.port}\n`);
     });

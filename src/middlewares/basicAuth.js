@@ -1,7 +1,6 @@
 const config = require("../config/global_config");
 const wrapper = require("../helpers/utils/wrapper");
 const { UnauthorizedError } = require("../helpers/errors");
-const validate = require("validate.js");
 const { ERROR } = require("../helpers/http-status/status_code");
 
 const isAuthenticated = async (req, res, next) => {
@@ -9,7 +8,7 @@ const isAuthenticated = async (req, res, next) => {
   let authValid = false;
   const header = req.headers.authorization;
 
-  if (validate.isEmpty(header) || !header || !header.startsWith("Basic ")) {
+  if (typeof header !== "string" || !header.startsWith("Basic ")) {
     result.err = new UnauthorizedError();
     return wrapper.response(res, "fail", result, "Token is not valid", ERROR.UNAUTHORIZED);
   }
@@ -31,3 +30,4 @@ const isAuthenticated = async (req, res, next) => {
 };
 
 module.exports = { isAuthenticated };
+
