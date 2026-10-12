@@ -216,6 +216,7 @@ class ArticleCommandDomain {
     }
 
     const articleResult = await this.command.insertArticle({
+      imageMetadata: payload,
       id, author_id, category_id, series_id,
       title, slug, summary, content,
       featured_image, status, published_at,
@@ -305,7 +306,8 @@ class ArticleCommandDomain {
 
     // Tentukan field mana yang akan diupdate
     const updatedFields = [];
-    if (title !== undefined) updatedFields.push("title", "slug");
+    for (const key of ["featured_image_alt", "featured_image_caption", "featured_image_credit"]) { if(payload[key] !== undefined) updatedFields.push(key); }
+    if (title !== undefined) { updatedFields.push("title"); if(title !== article.title) updatedFields.push("slug"); }
     if (summary !== undefined) updatedFields.push("summary");
     if (content !== undefined) updatedFields.push("content");
     if (featured_image !== undefined) updatedFields.push("featured_image");
@@ -317,7 +319,7 @@ class ArticleCommandDomain {
 
     const effectiveTitle = title !== undefined ? title : article.title;
     const effectiveContent = content !== undefined ? content : article.content;
-    const contentChanged = title !== undefined || content !== undefined;
+    const contentChanged = (title !== undefined && title !== article.title) || (content !== undefined && content !== article.content);
 
     const becomingFinal =
       isAiTranslationStatus(nextStatus) &&
@@ -343,7 +345,8 @@ class ArticleCommandDomain {
         const entry = resolvedTranslations?.[loc];
         if (!entry) continue;
         if (entry.title !== undefined) {
-          updatedFields.push(`title_${loc}`, `slug_${loc}`);
+          updatedFields.push(`title_${loc}`);
+          if(entry.title !== article[`title_${loc}`]) updatedFields.push(`slug_${loc}`);
           translationValues[`title_${loc}`] = entry.title;
           translationValues[`slug_${loc}`] = generateSlug(entry.title);
         }
@@ -385,6 +388,7 @@ class ArticleCommandDomain {
     const slug = title ? generateSlug(title) : undefined;
 
     const updateResult = await this.command.updateArticle({
+      imageMetadata: payload,
       id, category_id, series_id, title, slug,
       summary, content, featured_image, placements, translationValues, status, published_at,
       topic_ids, tag_ids, updatedFields,

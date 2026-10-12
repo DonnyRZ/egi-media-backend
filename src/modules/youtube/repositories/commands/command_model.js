@@ -1,4 +1,15 @@
 const joi = require("joi");
+const { extractYoutubeId } = require("../../../../helpers/utils/youtube");
+const youtubeUrl = joi.string().uri().custom((value, helpers) => extractYoutubeId(value) ? value : helpers.error("any.invalid"));
+const metadata = {
+  format: joi.string().valid("horizontal", "short"),
+  poster_landscape: joi.string().uri({scheme:["http","https"]}).allow("", null),
+  poster_portrait: joi.string().uri({scheme:["http","https"]}).allow("", null),
+  duration_seconds: joi.number().integer().min(1).allow(null),
+  category_id: joi.string().uuid().allow(null),
+  program_id: joi.string().uuid().allow(null),
+  episode_number: joi.number().integer().min(1).allow(null),
+};
 
 // Indonesian (id) is the primary language and lives in the top-level fields.
 // English (en) and Uzbek (uz) are optional. A translation is meaningful when it
@@ -18,7 +29,8 @@ const updateTranslationEntry = joi
 const videoPayload = {
   title: joi.string().trim().max(255).required(),
   description: joi.string().trim().allow("", null).optional(),
-  url: joi.string().uri().required(),
+  url: youtubeUrl.required(),
+  ...metadata,
   is_active: joi.boolean().default(true),
   translations: joi
     .object({
@@ -36,7 +48,8 @@ const updateVideoParamType = joi.object({
   id: joi.string().uuid().required(),
   title: joi.string().trim().max(255).required(),
   description: joi.string().trim().allow("", null).optional(),
-  url: joi.string().uri().required(),
+  url: youtubeUrl.required(),
+  ...metadata,
   is_active: joi.boolean().default(true),
   translations: joi
     .object({

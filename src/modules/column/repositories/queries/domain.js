@@ -48,7 +48,11 @@ class ColumnQueryDomain {
       title: pickLocalized(row, "title", locale),
       slug: pickLocalized(row, "slug", locale),
       summary: pickLocalized(row, "summary", locale) || null,
+      category_id: row.category_id || null,
       featured_image: row.featured_image || null,
+      featured_image_alt: row.featured_image_alt || null,
+      featured_image_caption: row.featured_image_caption || null,
+      featured_image_credit: row.featured_image_credit || null,
       status: row.status,
       translation_status: row.translation_status || "none",
       rejection_reason: row.rejection_reason || null,
@@ -58,6 +62,8 @@ class ColumnQueryDomain {
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
+        avatar_url: row.author_avatar_url || null,
+        bio: row.author_bio || null,
         email: resolveAuthorEmail(row.author_email),
         role: row.author_role || null,
       },
@@ -97,7 +103,11 @@ class ColumnQueryDomain {
       summary: pickLocalized(row, "summary", locale) || null,
       content: pickLocalized(row, "content", locale),
       translations,
+      category_id: row.category_id || null,
       featured_image: row.featured_image || null,
+      featured_image_alt: row.featured_image_alt || null,
+      featured_image_caption: row.featured_image_caption || null,
+      featured_image_credit: row.featured_image_credit || null,
       status: row.status,
       translation_status: row.translation_status || "none",
       rejection_reason: row.rejection_reason || null,
@@ -113,6 +123,8 @@ class ColumnQueryDomain {
       author: {
         id: row.author_id,
         full_name: row.author_full_name,
+        avatar_url: row.author_avatar_url || null,
+        bio: row.author_bio || null,
         email: resolveAuthorEmail(row.author_email),
         role: row.author_role || null,
       },
@@ -120,12 +132,12 @@ class ColumnQueryDomain {
   }
 
   async getColumns(payload) {
-    const { page, limit, search, author_id, sort, lang } = payload;
+    const { page, limit, search, author_id, category_id, sort, lang } = payload;
     const requestedLocale = lang || DEFAULT_LOCALE;
 
     const [columnsResult, countResult] = await Promise.all([
-      this.query.findAllPublishedColumns({ page, limit, search, author_id, sort }),
-      this.query.countAllPublishedColumns({ search, author_id }),
+      this.query.findAllPublishedColumns({ page, limit, search, author_id, category_id, sort }),
+      this.query.countAllPublishedColumns({ search, author_id, category_id }),
     ]);
 
     if (columnsResult.err) {

@@ -15,7 +15,7 @@ class SeriesQuery {
     this.db = db;
   }
 
-  async findMany({ page, limit, search }) {
+  async findMany({ page, limit, search, topic_id }) {
     const offset = (page - 1) * limit;
     const searchValue = search ? `%${search}%` : null;
     const rowsQuery = `
@@ -38,6 +38,7 @@ class SeriesQuery {
         OR s.name_en ILIKE $1 OR s.slug_en ILIKE $1 OR s.description_en ILIKE $1
         OR s.name_uz ILIKE $1 OR s.slug_uz ILIKE $1 OR s.description_uz ILIKE $1
       )
+      AND ($4::uuid IS NULL OR s.topic_id=$4)
       ORDER BY s.name ASC, s.id ASC
       LIMIT $2 OFFSET $3;
     `;
@@ -49,12 +50,12 @@ class SeriesQuery {
         OR s.name ILIKE $1 OR s.slug ILIKE $1 OR s.description ILIKE $1
         OR s.name_en ILIKE $1 OR s.slug_en ILIKE $1 OR s.description_en ILIKE $1
         OR s.name_uz ILIKE $1 OR s.slug_uz ILIKE $1 OR s.description_uz ILIKE $1
-      );
+      ) AND ($2::uuid IS NULL OR s.topic_id=$2);
     `;
 
     const [rows, count] = await Promise.all([
-      this.db.executeQuery(rowsQuery, [searchValue, limit, offset]),
-      this.db.executeQuery(countQuery, [searchValue]),
+      this.db.executeQuery(rowsQuery, [searchValue, limit, offset,topic_id||null]),
+      this.db.executeQuery(countQuery, [searchValue,topic_id||null]),
     ]);
 
     return { rows, count };

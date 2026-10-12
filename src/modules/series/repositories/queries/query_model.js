@@ -11,6 +11,7 @@ const seriesIdParamType = joi.object({
 const listSeriesParamType = joi.object({
   page: joi.number().integer().min(1).default(1),
   limit: joi.number().integer().min(1).max(100).default(20),
+  topic_id: joi.string().uuid().optional(),
   search: joi.string().trim().max(100).allow("").default(""),
   lang: localeParam,
 });

@@ -6,6 +6,11 @@ const validator = require("../../../helpers/utils/validator");
 const { sendResponse } = require("../../../helpers/utils/response");
 const { SUCCESS } = require("../../../helpers/http-status/status_code");
 
+const mediaMetadata = body => Object.fromEntries(
+  ['featured_image_alt', 'featured_image_caption', 'featured_image_credit', 'category_id']
+    .filter(key => Object.prototype.hasOwnProperty.call(body, key)).map(key => [key, body[key]])
+);
+
 const requestAuditMeta = (req) => {
   const forwarded = req.headers["x-forwarded-for"];
   const rawIp = Array.isArray(forwarded)
@@ -24,6 +29,7 @@ const getColumns = async (req, res) => {
     limit: req.query.limit,
     search: req.query.search,
     author_id: req.query.author_id,
+    category_id: req.query.category_id,
     sort: req.query.sort,
     lang: req.query.lang,
   };
@@ -40,6 +46,7 @@ const createColumn = async (req, res) => {
     summary: req.body.summary,
     content: req.body.content,
     featured_image: req.body.featured_image,
+    ...mediaMetadata(req.body),
     translations: req.body.translations,
     status: req.body.status,
   };
@@ -146,6 +153,7 @@ const updateColumn = async (req, res) => {
     summary: req.body.summary,
     content: req.body.content,
     featured_image: req.body.featured_image,
+    ...mediaMetadata(req.body),
     translations: req.body.translations,
   };
   const validatePayload = validator.isValidPayload(payload, commandModel.updateColumnParamType);

@@ -122,6 +122,8 @@ class ColumnCommandDomain {
     const translationValues = this._buildTranslationValues(translations);
 
     const result = await this.command.insertColumn({
+      imageMetadata: payload,
+      category_id: payload.category_id,
       id,
       author_id,
       title,
@@ -166,7 +168,9 @@ class ColumnCommandDomain {
     }
 
     const updatedFields = [];
-    if (title !== undefined) updatedFields.push("title", "slug");
+    if(payload.category_id !== undefined) updatedFields.push("category_id");
+    for (const key of ["featured_image_alt", "featured_image_caption", "featured_image_credit"]) { if(payload[key] !== undefined) updatedFields.push(key); }
+    if (title !== undefined) { updatedFields.push("title"); if(title !== column.title) updatedFields.push("slug"); }
     if (summary !== undefined) updatedFields.push("summary");
     if (content !== undefined) updatedFields.push("content");
     if (featured_image !== undefined) updatedFields.push("featured_image");
@@ -176,7 +180,8 @@ class ColumnCommandDomain {
       const entry = translations?.[loc];
       if (!entry) continue;
       if (entry.title !== undefined) {
-        updatedFields.push(`title_${loc}`, `slug_${loc}`);
+        updatedFields.push(`title_${loc}`);
+        if(entry.title !== column[`title_${loc}`]) updatedFields.push(`slug_${loc}`);
         translationValues[`title_${loc}`] = entry.title;
         translationValues[`slug_${loc}`] = generateSlug(entry.title);
       }
@@ -196,6 +201,8 @@ class ColumnCommandDomain {
 
     const slug = title ? generateSlug(title) : undefined;
     const result = await this.command.updateColumn({
+      imageMetadata: payload,
+      category_id: payload.category_id,
       id, title, slug, summary, content, featured_image, translationValues, updatedFields,
     });
 
@@ -204,7 +211,9 @@ class ColumnCommandDomain {
       return wrapper.error(result.err);
     }
 
-    if (result.data.status === "published") {
+    const sourceChanged = ["title", "summary", "content"].some(key => payload[key] !== undefined && payload[key] !== column[key]);
+    const overridesChanged = TRANSLATION_LOCALES.some(loc => ["title", "summary", "content"].some(key => translations?.[loc]?.[key] !== undefined && translations[loc][key] !== column[`${key}_${loc}`]));
+    if (result.data.status === "published" && (sourceChanged || overridesChanged || column.translation_status !== "ready")) {
       await this._applyPublishedTranslation({
         id,
         actor_id,

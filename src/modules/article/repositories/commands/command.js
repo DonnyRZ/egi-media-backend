@@ -28,6 +28,7 @@ class Command {
 
   // ─── Insert Article ───────────────────────────────────────────────────────────
   async insertArticle({
+    imageMetadata = {},
     id,
     author_id,
     category_id,
@@ -53,13 +54,13 @@ class Command {
           featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
-          translation_status,
+          translation_status, featured_image_alt, featured_image_caption, featured_image_credit,
           created_at, updated_at
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
           $13, $14, $15, $16, $17, $18, $19, $20,
-          $21,
+          $21, $22, $23, $24,
           NOW(), NOW()
         )
         RETURNING
@@ -68,7 +69,7 @@ class Command {
           featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
-          translation_status,
+          translation_status, featured_image_alt, featured_image_caption, featured_image_credit,
           created_at, updated_at
       `;
 
@@ -78,7 +79,7 @@ class Command {
         featured_image || null, status, published_at || null,
         placements && placements.length > 0 ? placements : ["latest_news"],
         ...TRANSLATION_COLUMNS.map((col) => translationValues?.[col] ?? null),
-        translation_status || "none",
+        translation_status || "none", imageMetadata.featured_image_alt || null, imageMetadata.featured_image_caption || null, imageMetadata.featured_image_credit || null,
       ];
       const queries = [{ query, values }];
 
@@ -105,7 +106,7 @@ class Command {
   }
 
   // ─── Update Article ───────────────────────────────────────────────────────────
-  async updateArticle({
+  async updateArticle({imageMetadata = {},
     id,
     category_id,
     series_id,
@@ -127,6 +128,9 @@ class Command {
       const setClauses = [];
       const values = [];
       let idx = 1;
+      for (const key of ["featured_image_alt", "featured_image_caption", "featured_image_credit"]) {
+        if(updatedFields.includes(key)) { setClauses.push(`${key} = $${idx}`); values.push(imageMetadata[key] || null); idx++; }
+      }
 
       if (updatedFields.includes("title")) {
         setClauses.push(`title = $${idx}`);
@@ -206,7 +210,7 @@ class Command {
           featured_image, status, published_at, placements,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
-          translation_status,
+          translation_status, featured_image_alt, featured_image_caption, featured_image_credit,
           created_at, updated_at
       `;
 

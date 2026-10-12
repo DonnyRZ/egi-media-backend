@@ -78,6 +78,7 @@ class YoutubeCommandDomain {
       author_id: payload.actor_id || null,
       status: visibility.status,
       created_at: new Date(),
+      metadata: { ...payload, format: payload.format || (new URL(payload.url).pathname.startsWith("/shorts/") ? "short" : "horizontal") },
       title_en: translationValues.title_en ?? null,
       description_en: translationValues.description_en ?? null,
       title_uz: translationValues.title_uz ?? null,
@@ -133,6 +134,7 @@ class YoutubeCommandDomain {
       status: visibility.status,
       translationValues,
       updatedTranslationFields,
+      metadata: payload,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to update YouTube video"));

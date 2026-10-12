@@ -41,6 +41,9 @@ const createArticleParamType = joi.object({
   summary: joi.string().optional().allow(null, ""),
   content: joi.string().required(),
   featured_image: joi.string().uri().optional().allow(null, ""),
+  featured_image_alt: joi.string().max(500).allow(null, ""),
+  featured_image_caption: joi.string().max(1000).allow(null, ""),
+  featured_image_credit: joi.string().max(500).allow(null, ""),
   translations: joi
     .object({
       en: createTranslationEntry.optional(),
@@ -69,6 +72,9 @@ const updateArticleParamType = joi.object({
   summary: joi.string().optional().allow(null, ""),
   content: joi.string().optional(),
   featured_image: joi.string().uri().optional().allow(null, ""),
+  featured_image_alt: joi.string().max(500).allow(null, ""),
+  featured_image_caption: joi.string().max(1000).allow(null, ""),
+  featured_image_credit: joi.string().max(500).allow(null, ""),
   translations: joi
     .object({
       en: updateTranslationEntry.optional(),

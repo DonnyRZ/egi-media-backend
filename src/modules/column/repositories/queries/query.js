@@ -10,7 +10,7 @@ class Query {
   async findColumnExistsById(id) {
     try {
       const query = `
-        SELECT id, author_id, status, title, summary, content,
+        SELECT id, author_id, status, title, slug, summary, content,
                title_en, content_en, summary_en,
                title_uz, content_uz, summary_uz,
                translation_status
@@ -83,7 +83,7 @@ class Query {
       c.title_uz,
       c.slug_uz,
       c.summary_uz,
-      c.featured_image,
+      c.featured_image, c.category_id, c.featured_image_alt, c.featured_image_caption, c.featured_image_credit,
       c.status,
       c.translation_status,
       c.rejection_reason,
@@ -91,7 +91,7 @@ class Query {
       c.created_at,
       c.updated_at,
       u.id AS author_id,
-      u.full_name AS author_full_name,
+      u.full_name AS author_full_name, up.avatar_url AS author_avatar_url, up.bio AS author_bio,
       u.email AS author_email,
       u.role AS author_role
     `;
@@ -125,6 +125,7 @@ class Query {
         SELECT ${this._listSelect()}
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE ${conditions.join(" AND ")}
         ORDER BY
           CASE WHEN c.status = 'pending_approval' THEN 0 ELSE 1 END,
@@ -168,6 +169,7 @@ class Query {
         SELECT COUNT(*)::int AS total
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE ${conditions.join(" AND ")}
       `;
       const result = await this.db.executeQuery(query, values);
@@ -178,7 +180,7 @@ class Query {
     }
   }
 
-  async findAllPublishedColumns({ page, limit, search, author_id, sort }) {
+  async findAllPublishedColumns({ page, limit, search, author_id, category_id, sort }) {
     try {
       const offset = (page - 1) * limit;
       const conditions = ["c.deleted_at IS NULL", "c.status = 'published'", "c.translation_status = 'ready'"];
@@ -195,6 +197,7 @@ class Query {
         idx++;
       }
 
+      if(category_id){conditions.push(`c.category_id = $${idx}`);values.push(category_id);idx++;}
       if (author_id) {
         conditions.push(`c.author_id = $${idx}`);
         values.push(author_id);
@@ -213,6 +216,7 @@ class Query {
         SELECT ${this._listSelect()}
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         ${whereClause}
         ${orderClause}
         LIMIT $${idx} OFFSET $${idx + 1}
@@ -227,7 +231,7 @@ class Query {
     }
   }
 
-  async countAllPublishedColumns({ search, author_id }) {
+  async countAllPublishedColumns({ search, author_id, category_id }) {
     try {
       const conditions = ["c.deleted_at IS NULL", "c.status = 'published'", "c.translation_status = 'ready'"];
       const values = [];
@@ -243,6 +247,7 @@ class Query {
         idx++;
       }
 
+      if(category_id){conditions.push(`c.category_id = $${idx}`);values.push(category_id);idx++;}
       if (author_id) {
         conditions.push(`c.author_id = $${idx}`);
         values.push(author_id);
@@ -279,6 +284,7 @@ class Query {
         SELECT ${this._listSelect()}
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE ${conditions.join(" AND ")}
         ORDER BY c.updated_at DESC
         LIMIT $${idx} OFFSET $${idx + 1}
@@ -321,6 +327,7 @@ class Query {
         SELECT ${this._listSelect()}
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE c.deleted_at IS NULL
           AND c.status = 'pending_approval'
         ORDER BY c.created_at ASC
@@ -358,6 +365,7 @@ class Query {
         FROM saved_columns sc
         INNER JOIN "columns" c ON c.id = sc.column_id
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE sc.user_id = $1
           AND c.deleted_at IS NULL
           AND c.status = 'published'
@@ -400,11 +408,11 @@ class Query {
           c.title, c.slug, c.summary, c.content,
           c.title_en, c.slug_en, c.summary_en, c.content_en,
           c.title_uz, c.slug_uz, c.summary_uz, c.content_uz,
-          c.featured_image, c.status, c.translation_status, c.rejection_reason,
+          c.featured_image, c.category_id, c.featured_image_alt, c.featured_image_caption, c.featured_image_credit, c.status, c.translation_status, c.rejection_reason,
           c.reviewed_by, c.reviewed_at, c.published_at,
           c.created_at, c.updated_at,
           u.id AS author_id,
-          u.full_name AS author_full_name,
+          u.full_name AS author_full_name, up.avatar_url AS author_avatar_url, up.bio AS author_bio,
           u.email AS author_email,
           u.role AS author_role,
           (SELECT COUNT(*)::int FROM column_views cv WHERE cv.column_id = c.id) AS view_count,
@@ -413,6 +421,7 @@ class Query {
           (SELECT COUNT(*)::int FROM column_comments cc WHERE cc.column_id = c.id AND cc.deleted_at IS NULL) AS comment_count
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE c.id = $1
           AND c.deleted_at IS NULL
         LIMIT 1
@@ -436,11 +445,11 @@ class Query {
           c.title, c.slug, c.summary, c.content,
           c.title_en, c.slug_en, c.summary_en, c.content_en,
           c.title_uz, c.slug_uz, c.summary_uz, c.content_uz,
-          c.featured_image, c.status, c.translation_status, c.rejection_reason,
+          c.featured_image, c.category_id, c.featured_image_alt, c.featured_image_caption, c.featured_image_credit, c.status, c.translation_status, c.rejection_reason,
           c.reviewed_by, c.reviewed_at, c.published_at,
           c.created_at, c.updated_at,
           u.id AS author_id,
-          u.full_name AS author_full_name,
+          u.full_name AS author_full_name, up.avatar_url AS author_avatar_url, up.bio AS author_bio,
           u.email AS author_email,
           u.role AS author_role,
           (SELECT COUNT(*)::int FROM column_views cv WHERE cv.column_id = c.id) AS view_count,
@@ -449,6 +458,7 @@ class Query {
           (SELECT COUNT(*)::int FROM column_comments cc WHERE cc.column_id = c.id AND cc.deleted_at IS NULL) AS comment_count
         FROM "columns" c
         INNER JOIN users u ON u.id = c.author_id
+        LEFT JOIN user_profiles up ON up.user_id=u.id
         WHERE (c.slug = $1 OR c.slug_en = $1 OR c.slug_uz = $1)
           AND c.status = 'published'
           AND c.translation_status = 'ready'

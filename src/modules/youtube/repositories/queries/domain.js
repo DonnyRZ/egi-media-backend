@@ -42,6 +42,13 @@ class YoutubeQueryDomain {
       author_id: row.author_id || null,
       status: row.status || (row.is_active !== false ? "published" : "review"),
       created_at: row.created_at,
+      format: row.format || "horizontal",
+      poster_landscape: row.poster_landscape || null,
+      poster_portrait: row.poster_portrait || null,
+      duration_seconds: row.duration_seconds || null,
+      category_id: row.category_id || null,
+      program_id: row.program_id || null,
+      episode_number: row.episode_number || null,
     };
   }
 
@@ -77,6 +84,13 @@ class YoutubeQueryDomain {
       status: row.status || (row.is_active !== false ? "published" : "review"),
       translations,
       created_at: row.created_at,
+      format: row.format || "horizontal",
+      poster_landscape: row.poster_landscape || null,
+      poster_portrait: row.poster_portrait || null,
+      duration_seconds: row.duration_seconds || null,
+      category_id: row.category_id || null,
+      program_id: row.program_id || null,
+      episode_number: row.episode_number || null,
     };
   }
 
@@ -98,9 +112,9 @@ class YoutubeQueryDomain {
     });
   }
 
-  async getYoutubeVideo({ id, lang }) {
+  async getYoutubeVideo({ id, lang, publicOnly }) {
     const requestedLocale = lang || DEFAULT_LOCALE;
-    const result = await this.query.findOneById(id);
+    const result = await this.query.findOneById(id, publicOnly);
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to retrieve YouTube video"));
     }

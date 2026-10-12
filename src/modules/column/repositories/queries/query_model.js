@@ -8,6 +8,7 @@ const getColumnsParamType = joi.object({
   page: joi.number().integer().min(1).default(1),
   limit: joi.number().integer().min(1).max(100).default(20),
   search: joi.string().optional().allow("", null),
+  category_id: joi.string().uuid().optional(),
   author_id: joi.string().uuid().optional().allow("", null),
   sort: joi.string().valid("latest", "oldest", "popular").default("latest"),
   lang: localeParam,

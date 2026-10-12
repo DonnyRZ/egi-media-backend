@@ -14,6 +14,7 @@ class Command {
   }
 
   async insertColumn({
+    imageMetadata = {},category_id,
     id,
     author_id,
     title,
@@ -30,13 +31,13 @@ class Command {
           id, author_id, title, slug, summary, content, featured_image,
           title_en, slug_en, summary_en, content_en,
           title_uz, slug_uz, summary_uz, content_uz,
-          status, created_at, updated_at
+          status, featured_image_alt, featured_image_caption, featured_image_credit, category_id, created_at, updated_at
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7,
           $8, $9, $10, $11,
           $12, $13, $14, $15,
-          $16, NOW(), NOW()
+          $16, $17, $18, $19, $20, NOW(), NOW()
         )
         RETURNING
           id, author_id, title, slug, summary, content, featured_image,
@@ -49,7 +50,7 @@ class Command {
       const values = [
         id, author_id, title, slug, summary || null, content, featured_image || null,
         ...TRANSLATION_COLUMNS.map((col) => translationValues?.[col] ?? null),
-        status,
+        status, imageMetadata.featured_image_alt || null, imageMetadata.featured_image_caption || null, imageMetadata.featured_image_credit || null, category_id || null,
       ];
 
       const result = await this.db.executeQuery(query, values);
@@ -63,11 +64,15 @@ class Command {
     }
   }
 
-  async updateColumn({ id, title, slug, summary, content, featured_image, translationValues, updatedFields }) {
+  async updateColumn({imageMetadata = {},category_id, id, title, slug, summary, content, featured_image, translationValues, updatedFields }) {
     try {
       const setClauses = [];
       const values = [];
       let idx = 1;
+      if(updatedFields.includes("category_id")){setClauses.push(`category_id = $${idx}`);values.push(category_id||null);idx++;}
+      for (const key of ["featured_image_alt", "featured_image_caption", "featured_image_credit"]) {
+        if(updatedFields.includes(key)) { setClauses.push(`${key} = $${idx}`); values.push(imageMetadata[key] || null); idx++; }
+      }
 
       if (updatedFields.includes("title")) {
         setClauses.push(`title = $${idx}`);

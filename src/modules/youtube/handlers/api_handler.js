@@ -9,7 +9,7 @@ const { SUCCESS } = require("../../../helpers/http-status/status_code");
 const listYoutubeVideos = async (req, res) => {
   const payload = validator.isValidPayload(req.query, queryModel.listVideosParamType);
   if (payload.err) return sendResponse(payload, res);
-  return paginationResponse(await queryHandler.listYoutubeVideos(payload.data), res);
+  return paginationResponse(await queryHandler.listYoutubeVideos({ ...payload.data, active: true, publicOnly: true }), res);
 };
 
 const getYoutubeVideo = async (req, res) => {
@@ -18,7 +18,7 @@ const getYoutubeVideo = async (req, res) => {
     queryModel.getVideoParamType
   );
   if (payload.err) return sendResponse(payload, res);
-  return sendResponse(await queryHandler.getYoutubeVideo(payload.data), res);
+  return sendResponse(await queryHandler.getYoutubeVideo({ ...payload.data, publicOnly: true }), res);
 };
 
 const withActor = (req, data) => ({
@@ -59,7 +59,22 @@ const deleteYoutubeVideo = async (req, res) => {
   );
 };
 
+
+const listCmsVideos = async (req, res) => {
+  const payload = validator.isValidPayload(req.query, queryModel.listVideosParamType);
+  if (payload.err) return sendResponse(payload, res);
+  return paginationResponse(await queryHandler.listYoutubeVideos({ ...payload.data,
+    publicOnly: false, actorId: req.userMeta.id, actorRole: req.userMeta.role }), res);
+};
+const getCmsVideo = async (req, res) => {
+  const payload = validator.isValidPayload({id: req.params.id, lang:req.query.lang}, queryModel.getVideoParamType);
+  if (payload.err) return sendResponse(payload,res);
+  return sendResponse(await queryHandler.getYoutubeVideo(payload.data),res);
+};
+
 module.exports = {
+  listCmsVideos,
+  getCmsVideo,
   listYoutubeVideos,
   getYoutubeVideo,
   addYoutubeVideo,

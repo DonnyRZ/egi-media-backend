@@ -22,7 +22,11 @@ const createColumnParamType = joi.object({
   title: joi.string().max(255).required(),
   summary: joi.string().optional().allow(null, ""),
   content: joi.string().required(),
+  category_id: joi.string().uuid().allow(null),
   featured_image: joi.string().uri().optional().allow(null, ""),
+  featured_image_alt: joi.string().max(500).allow(null, ""),
+  featured_image_caption: joi.string().max(1000).allow(null, ""),
+  featured_image_credit: joi.string().max(500).allow(null, ""),
   translations: joi
     .object({
       en: createTranslationEntry.optional(),
@@ -39,7 +43,11 @@ const updateColumnParamType = joi.object({
   title: joi.string().max(255).optional(),
   summary: joi.string().optional().allow(null, ""),
   content: joi.string().optional(),
+  category_id: joi.string().uuid().allow(null),
   featured_image: joi.string().uri().optional().allow(null, ""),
+  featured_image_alt: joi.string().max(500).allow(null, ""),
+  featured_image_caption: joi.string().max(1000).allow(null, ""),
+  featured_image_credit: joi.string().max(500).allow(null, ""),
   translations: joi
     .object({
       en: updateTranslationEntry.optional(),

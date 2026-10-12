@@ -1,71 +1,32 @@
-const collection = "youtube_videos";
-
-const SELECT_COLUMNS = `
-  id, title, description, url, is_active, author_id, status,
-  title_en, description_en, title_uz, description_uz,
-  created_at
-`;
-
+const COLUMNS = `v.id,v.title,v.description,v.url,v.is_active,v.author_id,v.status,
+  v.title_en,v.description_en,v.title_uz,v.description_uz,v.created_at,
+  v.format,v.poster_landscape,v.poster_portrait,v.duration_seconds,v.category_id,v.program_id,v.episode_number`;
 class YoutubeQuery {
-  constructor(db) {
-    this.db = db;
-  }
-
-  async findMany({ page, limit, search, active }) {
-    const offset = (page - 1) * limit;
-    const searchValue = search ? `%${search}%` : null;
-
-    // active: true (default/public) | false | 'all' (CMS)
-    let activeClause = "is_active = TRUE";
-    if (active === "all") {
-      activeClause = "TRUE";
-    } else if (active === false || active === "false") {
-      activeClause = "is_active = FALSE";
+  constructor(db) { this.db=db; }
+  async findMany({page,limit,search,active,publicOnly=true,actorRole,actorId,format,category_id,program_id,collection_id}) {
+    const filters=['($1::text IS NULL OR v.title ILIKE $1 OR v.description ILIKE $1 OR v.title_en ILIKE $1 OR v.title_uz ILIKE $1)'];
+    const values=[search ? `%${search}%` : null];
+    if(publicOnly) filters.push("v.is_active AND v.status='published'");
+    else {
+      if(actorRole !== 'superadmin') {values.push(actorId);filters.push(`v.author_id=$${values.length}`);}
+      if(active !== 'all') {values.push(active !== false && active !== 'false');filters.push(`v.is_active=$${values.length}`);}
     }
-
-    const rowsQuery = `
-      SELECT ${SELECT_COLUMNS}
-      FROM ${collection}
-      WHERE ${activeClause}
-        AND (
-          $1::text IS NULL
-          OR title ILIKE $1 OR description ILIKE $1
-          OR title_en ILIKE $1 OR description_en ILIKE $1
-          OR title_uz ILIKE $1 OR description_uz ILIKE $1
-        )
-      ORDER BY created_at DESC, title ASC, id ASC
-      LIMIT $2 OFFSET $3;
-    `;
-
-    const countQuery = `
-      SELECT COUNT(*)::int AS total
-      FROM ${collection}
-      WHERE ${activeClause}
-        AND (
-          $1::text IS NULL
-          OR title ILIKE $1 OR description ILIKE $1
-          OR title_en ILIKE $1 OR description_en ILIKE $1
-          OR title_uz ILIKE $1 OR description_uz ILIKE $1
-        );
-    `;
-
-    const [rows, count] = await Promise.all([
-      this.db.executeQuery(rowsQuery, [searchValue, limit, offset]),
-      this.db.executeQuery(countQuery, [searchValue]),
+    for(const [key,value] of Object.entries({format,category_id,program_id})) {
+      if(value) {values.push(value);filters.push(`v.${key}=$${values.length}`);}
+    }
+    if(collection_id) {values.push(collection_id);filters.push(`EXISTS(SELECT 1 FROM video_collection_items i JOIN video_collections c ON c.id=i.collection_id WHERE i.video_id=v.id AND v.format=c.format AND c.is_active AND i.collection_id=$${values.length})`);}
+    const where=filters.join(' AND ');
+    const countValues=[...values];
+    values.push(limit,(page-1)*limit);
+    const order = collection_id ? '(SELECT i.position FROM video_collection_items i WHERE i.video_id=v.id AND i.collection_id=$'+countValues.length+'),' : '';
+    const [rows,count]=await Promise.all([
+      this.db.executeQuery(`SELECT ${COLUMNS} FROM youtube_videos v WHERE ${where} ORDER BY ${order}${program_id ? 'v.episode_number ASC NULLS LAST,' : ''}v.created_at DESC,v.id DESC LIMIT $${values.length-1} OFFSET $${values.length}`,values),
+      this.db.executeQuery(`SELECT count(*)::int total FROM youtube_videos v WHERE ${where}`,countValues)
     ]);
-
-    return { rows, count };
+    return {rows,count};
   }
-
-  async findOneById(id) {
-    return this.db.executeQuery(
-      `SELECT ${SELECT_COLUMNS}
-       FROM ${collection}
-       WHERE id = $1
-       LIMIT 1;`,
-      [id]
-    );
+  findOneById(id, publicOnly=false) {
+    return this.db.executeQuery(`SELECT ${COLUMNS} FROM youtube_videos v WHERE v.id=$1 ${publicOnly ? "AND v.is_active AND v.status='published'" : ''} LIMIT 1`,[id]);
   }
 }
-
-module.exports = YoutubeQuery;
+module.exports=YoutubeQuery;

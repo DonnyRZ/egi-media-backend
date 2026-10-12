@@ -21,6 +21,7 @@ const NewsFeed = require("./news_feed");
 const Profesional = require("./profesional");
 
 module.exports = (server) => {
+  require("./editorial_media")(server);
   Auth(server);
   User(server);
   UserProfile(server);

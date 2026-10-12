@@ -6,6 +6,11 @@ const validator = require("../../../helpers/utils/validator");
 const { sendResponse } = require("../../../helpers/utils/response");
 const { SUCCESS } = require("../../../helpers/http-status/status_code");
 
+const mediaMetadata = body => Object.fromEntries(
+  ['featured_image_alt', 'featured_image_caption', 'featured_image_credit']
+    .filter(key => Object.prototype.hasOwnProperty.call(body, key)).map(key => [key, body[key]])
+);
+
 const requestAuditMeta = (req) => {
   const forwarded = req.headers["x-forwarded-for"];
   const rawIp = Array.isArray(forwarded)
@@ -73,6 +78,7 @@ const createArticle = async (req, res) => {
     summary: req.body.summary,
     content: req.body.content,
     featured_image: req.body.featured_image,
+    ...mediaMetadata(req.body),
     translations: req.body.translations,
     status: req.body.status,
     published_at: req.body.published_at,
@@ -239,6 +245,7 @@ const updateArticle = async (req, res) => {
     summary: req.body.summary,
     content: req.body.content,
     featured_image: req.body.featured_image,
+    ...mediaMetadata(req.body),
     translations: req.body.translations,
     status: req.body.status,
     published_at: req.body.published_at,
