@@ -39,3 +39,14 @@ test('Column HTTP list passes category scope to query',async()=>{
   const h=handler('column');const out=await h.api.getColumns({...req({}),query:{category_id:id}},{});
   assert.equal(out.err,null);assert.equal(h.read().category_id,id);
 });
+
+test('homepage highlights handler validates locale, disables cache and static route precedes detail', async () => {
+  const h = handler('article'); const headers = {};
+  const res = {setHeader:(name,value)=>headers[name]=value};
+  assert.equal((await h.api.getHomepageHighlights({...req({}),query:{}},res)).err,null);
+  assert.equal(h.read().lang,'id'); assert.equal(headers['Cache-Control'],'no-store');
+  for(const lang of ['en','uz']) { await h.api.getHomepageHighlights({...req({}),query:{lang}},res); assert.equal(h.read().lang,lang); }
+  assert.ok((await h.api.getHomepageHighlights({...req({}),query:{lang:'invalid'}},res)).err);
+  const routes=fs.readFileSync(path.join(__dirname,'../src/routes/article.js'),'utf8');
+  assert.ok(routes.indexOf('/api/v1/articles/homepage-highlights')<routes.indexOf('server.get("/api/v1/articles/:id"'));
+});

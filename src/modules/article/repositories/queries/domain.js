@@ -79,6 +79,14 @@ class ArticleQueryDomain {
     };
   }
 
+  async getHomepageHighlights({ lang = DEFAULT_LOCALE }) {
+    const result = await this.query.findHomepageHighlights();
+    if (result.err) return wrapper.error(result.err);
+    const data = { primary: [], supporting: [] };
+    for (const row of result.data) data[row.group_name].push(this.mapListItem(row, lang));
+    return wrapper.data(data);
+  }
+
   // ─── Get All Published Articles ─────────────────────────────────────────────
   async getArticles(payload) {
     const { page, limit, search, category_id, topic_id, tag_id, author_id, series_id, placement, sort, lang } = payload;

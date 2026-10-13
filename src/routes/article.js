@@ -6,6 +6,8 @@ module.exports = (server) => {
   // ─── Public Routes ──────────────────────────────────────────────────────────
   server.get("/api/v1/articles", articleHandler.getArticles);
 
+  server.get("/api/v1/articles/homepage-highlights", articleHandler.getHomepageHighlights);
+
   // Static path segments must be registered before /:id
   server.get("/api/v1/articles/slug/:slug", articleHandler.getArticleBySlug);
 

@@ -98,7 +98,10 @@ const getTranslationJobsParamType = joi.object({
   limit: joi.number().integer().min(1).max(100).default(30),
 });
 
+const getHomepageHighlightsParamType = joi.object({ lang: localeParam });
+
 module.exports = {
+  getHomepageHighlightsParamType,
   getArticlesParamType,
   getArticleByIdParamType,
   getArticleBySlugParamType,

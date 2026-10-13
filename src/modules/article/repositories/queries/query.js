@@ -7,6 +7,19 @@ class Query {
     this.db = db;
   }
 
+  async findHomepageHighlights() {
+    const { SQL, VALUES } = require("./homepage_highlights");
+    try {
+      const result = await this.db.executeQuery(SQL, VALUES);
+      if (!result || !Array.isArray(result.rows)) throw new Error("Highlights database read failed");
+      return wrapper.data(result.rows);
+    } catch (error) {
+      logger.error(ctx, "findHomepageHighlights", "Highlights read failed", error);
+      const { InternalServerError } = require("../../../../helpers/errors");
+      return wrapper.error(new InternalServerError("Unable to load homepage highlights"));
+    }
+  }
+
   // ─── Cek Article Exists ───────────────────────────────────────────────────────
   async findArticleExistsById(id) {
     try {

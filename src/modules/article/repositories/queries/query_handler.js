@@ -14,7 +14,10 @@ const getManageArticles = async (payload) => domain.getManageArticles(payload);
 const getArticleStats = async (payload) => domain.getArticleStats(payload);
 const getTranslationJobs = async (payload) => domain.getTranslationJobs(payload);
 
+const getHomepageHighlights = async payload => domain.getHomepageHighlights(payload);
+
 module.exports = {
+  getHomepageHighlights,
   getArticles,
   getArticleById,
   getArticleBySlug,

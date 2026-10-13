@@ -404,7 +404,15 @@ const retryTranslate = async (req, res) => {
   return sendResponse(result, res);
 };
 
+const getHomepageHighlights = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const validated = validator.isValidPayload(req.query, queryModel.getHomepageHighlightsParamType);
+  if (validated.err) return sendResponse(validated, res);
+  return sendResponse(await queryHandler.getHomepageHighlights(validated.data), res);
+};
+
 module.exports = {
+  getHomepageHighlights,
   getArticles,
   createArticle,
   getMyArticles,
