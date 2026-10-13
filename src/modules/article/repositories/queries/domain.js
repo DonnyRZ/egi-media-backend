@@ -2,6 +2,7 @@ const Query = require("./query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
 const { NotFoundError } = require("../../../../helpers/errors");
+const { localizedReadingTime } = require("../../../../helpers/utils/reading_time");
 const ctx = "Article-Query-Domain";
 
 // Indonesian (id) is the primary language; en/uz are optional translations.
@@ -44,6 +45,7 @@ class ArticleQueryDomain {
       title: pickLocalized(row, "title", locale),
       slug: pickLocalized(row, "slug", locale),
       summary: pickLocalized(row, "summary", locale) || null,
+      reading_time_minutes: localizedReadingTime(row, locale),
       featured_image: row.featured_image || null,
       featured_image_alt: row.featured_image_alt || null,
       featured_image_caption: row.featured_image_caption || null,
@@ -145,6 +147,7 @@ class ArticleQueryDomain {
       slug: pickLocalized(row, "slug", locale),
       summary: pickLocalized(row, "summary", locale) || null,
       content: pickLocalized(row, "content", locale),
+      reading_time_minutes: localizedReadingTime(row, locale),
       translations,
       featured_image: row.featured_image || null,
       featured_image_alt: row.featured_image_alt || null,

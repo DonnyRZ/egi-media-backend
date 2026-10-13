@@ -1,6 +1,7 @@
 const Query = require("./query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const logger = require("../../../../helpers/utils/logger");
+const { localizedReadingTime } = require("../../../../helpers/utils/reading_time");
 const { decrypt } = require("../../../../helpers/utils/crypto_helper");
 const {
   NotFoundError,
@@ -48,6 +49,7 @@ class ColumnQueryDomain {
       title: pickLocalized(row, "title", locale),
       slug: pickLocalized(row, "slug", locale),
       summary: pickLocalized(row, "summary", locale) || null,
+      reading_time_minutes: localizedReadingTime(row, locale),
       category_id: row.category_id || null,
       featured_image: row.featured_image || null,
       featured_image_alt: row.featured_image_alt || null,
@@ -102,6 +104,7 @@ class ColumnQueryDomain {
       slug: pickLocalized(row, "slug", locale),
       summary: pickLocalized(row, "summary", locale) || null,
       content: pickLocalized(row, "content", locale),
+      reading_time_minutes: localizedReadingTime(row, locale),
       translations,
       category_id: row.category_id || null,
       featured_image: row.featured_image || null,

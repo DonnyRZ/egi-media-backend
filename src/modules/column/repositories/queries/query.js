@@ -83,6 +83,7 @@ class Query {
       c.title_uz,
       c.slug_uz,
       c.summary_uz,
+      c.content AS reading_content, c.content_en AS reading_content_en, c.content_uz AS reading_content_uz,
       c.featured_image, c.category_id, c.featured_image_alt, c.featured_image_caption, c.featured_image_credit,
       c.status,
       c.translation_status,

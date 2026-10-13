@@ -30,6 +30,10 @@ Article and Column create/update accept optional `featured_image_alt` (500 chara
 
 ## Compatibility and recovery
 
+### Reading metadata
+
+Article and Column list/detail DTOs now include `reading_time_minutes: number | null`. The value is calculated from the full content in the resolved locale (200 visible words/minute), with the existing primary-language fallback. HTML tags, scripts, styles and comments are excluded. A missing/empty body yields null. Full body aliases used internally by list queries are never included in list responses. No database migration or content write is required. Frontend clients receiving older responses omit the unknown duration rather than calculating a fictional duration from the summary.
+
 Old client video writes continue to work and preserve added metadata. Private CMS video reads now use the authenticated endpoint; deploy the paired frontend/backend release together. Rolling application code back leaves schema additions and data intact. The SQL rollback file drops added data and is reserved for an isolated test database or a separately reviewed database recovery.
 
 Local tests: create an isolated PostgreSQL database on `127.0.0.1:55436`, apply migrations, then set `EDITORIAL_TEST_DATABASE_URL` to `postgres://postgres:editorial-local@127.0.0.1:55436/egi_editorial_test` and run `node --test tests/editorial-media.test.cjs`. Browser fixture server `tests/local-editorial-server.cjs --reset` binds loopback port 5007 and targets only that database. Never run the fixture server against production.
