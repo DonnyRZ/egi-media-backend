@@ -62,7 +62,7 @@ test('additive migration preserves legacy IDs, images and counters; exactly thre
   assert.equal(rows.find(row => row.placement === 'LATEST_VIDEOS').is_active, false);
 });
 test('upload validates actual binary dimensions, ratio, role and preserves bytes', async () => {
-  assert.equal((await upload('LEADERBOARD', 970, 250)).status, 201);
+  assert.equal((await upload('LEADERBOARD', 1920, 367)).status, 201);
   const valid = await upload('IN_FEED', 1280, 720); assert.equal(valid.status, 201);
   assert.equal(valid.body.data.width, 1280); assert.equal(valid.body.data.height, 720);
   assert.deepEqual([...objects.values()].find(value => value.readUInt32BE(16) === 1280), png(1280, 720));
@@ -93,4 +93,18 @@ test('empty inactive slot saves; activation without creative fails; legacy uncha
   assert.equal((await write(id, { ...blank, is_active: true })).status, 400);
   const sidebar = { title: 'Preserved legacy', image_url: '/sidebar.png', target_url: 'https://example.test', is_active: false };
   assert.equal((await write('22222222-2222-4222-8222-222222222222', sidebar)).status, 200);
+});
+
+test('existing banner receipt survives the ratio change; replacement must follow the new ratio', async () => {
+  const { signImage } = require('../src/helpers/storage/ad-image');
+  const id = '00000000-0000-4000-8000-000000004001';
+  const url = '/legacy-banner.png';
+  const receipt = signImage(url, { width: 970, height: 250 });
+  await pg.query('UPDATE ads SET image_url=$1,image_width=970,image_height=250,image_receipt=$2 WHERE id=$3', [url, receipt, id]);
+  const payload = { title: 'Edited legacy campaign', image_url: url, image_receipt: receipt, target_url: 'https://example.test', is_active: true };
+  assert.equal((await write(id, payload)).status, 200);
+  assert.equal((await write(id, { ...payload, image_receipt: 'tampered.invalid' })).status, 400);
+  assert.equal((await upload('LEADERBOARD', 970, 250)).status, 400);
+  const replacement = await upload('LEADERBOARD', 1920, 367);
+  assert.equal((await write(id, { ...payload, image_url: replacement.body.data.url, image_receipt: replacement.body.data.image_receipt })).status, 200);
 });

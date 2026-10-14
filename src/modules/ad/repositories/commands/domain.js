@@ -42,7 +42,8 @@ class AdCommandDomain {
     let image = { width: old.image_width, height: old.image_height };
     const changed = payload.image_url !== old.image_url;
     try {
-      if (payload.image_url && (changed || payload.image_receipt)) {
+      const newReceipt = payload.image_receipt && payload.image_receipt !== old.image_receipt;
+      if (payload.image_url && (changed || newReceipt)) {
         image = verifyImage(payload.image_receipt, payload.image_url, old.placement);
       }
     } catch (error) {
