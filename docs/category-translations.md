@@ -10,4 +10,4 @@ Apply the additive schema change only to the intended database:
 node scripts/run-category-ai-translations-migration.js --expect-database=<exact database name>
 ```
 
-The runner checks the target database and stores a checksum in `editorial_schema_migrations`; it refuses to reapply a changed migration under the same version.
+The runner checks the target database and stores a checksum in `editorial_schema_migrations`; it refuses to reapply a changed migration under the same version. The migration must run as a database role that can create objects in `public`; production applies it as the PostgreSQL administrator and grants the new tables to `egi_cms_app`.

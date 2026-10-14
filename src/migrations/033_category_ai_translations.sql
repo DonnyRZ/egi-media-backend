@@ -48,3 +48,11 @@ CREATE INDEX idx_category_translation_jobs_category
   ON category_translation_jobs (category_id, created_at DESC);
 CREATE INDEX idx_category_translation_jobs_status
   ON category_translation_jobs (job_status, created_at DESC);
+
+DO $grant$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'egi_cms_app') THEN
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE category_translation_state, category_translation_jobs TO egi_cms_app';
+  END IF;
+END
+$grant$;
