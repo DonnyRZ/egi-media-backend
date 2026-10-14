@@ -5,6 +5,7 @@ const PLACEMENTS = [
   "LEADERBOARD",
   "IN_FEED",
   "SIDEBAR_RECTANGLE",
+  "LATEST_VIDEOS",
 ];
 
 const imageUrl = joi
@@ -40,8 +41,9 @@ const createAdParamType = joi.object({
 const updateAdParamType = joi.object({
   id: joi.string().uuid().required(),
   title: adPayload.title,
-  image_url: adPayload.image_url,
-  target_url: adPayload.target_url,
+  image_url: imageUrl.allow("").required(),
+  target_url: joi.string().trim().uri({ scheme: ["http", "https"] }).max(2000).allow("").required(),
+  image_receipt: joi.string().max(6000).allow("", null).optional(),
   is_active: adPayload.is_active,
   placement: joi.string().valid(...PLACEMENTS).optional(),
 });

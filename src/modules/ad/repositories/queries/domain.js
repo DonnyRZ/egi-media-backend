@@ -22,6 +22,9 @@ class AdQueryDomain {
       impressions: row.impressions ?? 0,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      image_width: row.image_width ?? null,
+      image_height: row.image_height ?? null,
+      image_receipt: row.image_receipt ?? null,
     };
   }
 
@@ -32,6 +35,8 @@ class AdQueryDomain {
       image_url: row.image_url,
       target_url: row.target_url,
       placement: row.placement,
+      image_width: row.image_width ?? null,
+      image_height: row.image_height ?? null,
     };
   }
 

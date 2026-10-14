@@ -2,7 +2,7 @@ const collection = "ads";
 
 const RETURNING_COLUMNS = `
   id, title, image_url, target_url, placement, is_active,
-  clicks, impressions, created_at, updated_at
+  clicks, impressions, created_at, updated_at, image_width, image_height, image_receipt
 `;
 
 class AdCommand {
@@ -51,6 +51,9 @@ class AdCommand {
     target_url,
     is_active,
     updated_at,
+    image_width,
+    image_height,
+    image_receipt,
   }) {
     return this.db.executeQuery(
       `UPDATE ${collection}
@@ -58,7 +61,10 @@ class AdCommand {
            image_url = $2,
            target_url = $3,
            is_active = $4,
-           updated_at = $5
+           updated_at = $5,
+           image_width = $7,
+           image_height = $8,
+           image_receipt = $9
        WHERE id = $6
        RETURNING ${RETURNING_COLUMNS};`,
       [
@@ -68,6 +74,9 @@ class AdCommand {
         is_active !== false,
         updated_at,
         id,
+        image_width,
+        image_height,
+        image_receipt,
       ]
     );
   }
@@ -87,7 +96,7 @@ class AdCommand {
        SET clicks = clicks + 1,
            updated_at = NOW()
        WHERE id = $1 AND is_active = TRUE
-       RETURNING ${RETURNING_COLUMNS};`,
+       RETURNING id, clicks, impressions;`,
       [id]
     );
   }
@@ -98,7 +107,7 @@ class AdCommand {
        SET impressions = impressions + 1,
            updated_at = NOW()
        WHERE id = $1 AND is_active = TRUE
-       RETURNING ${RETURNING_COLUMNS};`,
+       RETURNING id, clicks, impressions;`,
       [id]
     );
   }

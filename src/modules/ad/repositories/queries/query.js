@@ -2,11 +2,11 @@ const collection = "ads";
 
 const SELECT_COLUMNS = `
   id, title, image_url, target_url, placement, is_active,
-  clicks, impressions, created_at, updated_at
+  clicks, impressions, created_at, updated_at, image_width, image_height, image_receipt
 `;
 
 const PUBLIC_COLUMNS = `
-  id, title, image_url, target_url, placement
+  id, title, image_url, target_url, placement, image_width, image_height
 `;
 
 class AdQuery {
@@ -32,6 +32,7 @@ class AdQuery {
       SELECT ${SELECT_COLUMNS}
       FROM ${collection}
       WHERE ${activeClause}
+        AND (placement <> 'SIDEBAR_RECTANGLE' OR $4 = 'SIDEBAR_RECTANGLE')
         AND ($4::text IS NULL OR placement = $4)
         AND (
           $1::text IS NULL
@@ -44,6 +45,7 @@ class AdQuery {
           WHEN 'LEADERBOARD' THEN 1
           WHEN 'IN_FEED' THEN 2
           WHEN 'SIDEBAR_RECTANGLE' THEN 3
+          WHEN 'LATEST_VIDEOS' THEN 3
           ELSE 4
         END,
         created_at ASC
@@ -54,6 +56,7 @@ class AdQuery {
       SELECT COUNT(*)::int AS total
       FROM ${collection}
       WHERE ${activeClause}
+        AND (placement <> 'SIDEBAR_RECTANGLE' OR $2 = 'SIDEBAR_RECTANGLE')
         AND ($2::text IS NULL OR placement = $2)
         AND (
           $1::text IS NULL
