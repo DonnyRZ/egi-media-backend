@@ -10,6 +10,7 @@ const redisConnection = require("../helpers/databases/redis/connection");
 const emailWorker = require("../helpers/queues/email.worker");
 const articleTranslationWorker = require("../helpers/queues/article-translation.worker");
 const columnTranslationWorker = require("../helpers/queues/column-translation.worker");
+const categoryTranslationWorker = require("../helpers/queues/category-translation.worker");
 const passport = require("passport");
 const swaggerUi = require("swagger-ui-express");
 const fs = require("fs");
@@ -39,6 +40,7 @@ class AppServer {
     emailWorker.start();
     articleTranslationWorker.start();
     columnTranslationWorker.start();
+    categoryTranslationWorker.start();
   }
 
 

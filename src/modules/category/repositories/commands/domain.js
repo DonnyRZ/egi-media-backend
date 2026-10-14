@@ -4,36 +4,37 @@ const Query = require("../queries/query");
 const wrapper = require("../../../../helpers/utils/wrapper");
 const { BadRequestError, ConflictError, InternalServerError, NotFoundError } = require("../../../../helpers/errors");
 const { toSlug } = require("../../../../helpers/utils/slug");
-
-const TRANSLATION_LOCALES = ["en", "uz"];
-
-const buildTranslationValues = (translations, { patch = false } = {}) => {
-  const translationValues = {};
-  const updatedTranslationFields = [];
-
-  for (const loc of TRANSLATION_LOCALES) {
-    const entry = translations?.[loc];
-    if (!entry) continue;
-
-    if (!patch || entry.name !== undefined) {
-      const slug = toSlug(entry.name || "");
-      translationValues[`name_${loc}`] = entry.name ?? null;
-      translationValues[`slug_${loc}`] = slug || null;
-      updatedTranslationFields.push(`name_${loc}`, `slug_${loc}`);
-    }
-    if (!patch || entry.description !== undefined) {
-      translationValues[`description_${loc}`] = entry.description ?? null;
-      updatedTranslationFields.push(`description_${loc}`);
-    }
-  }
-
-  return { translationValues, updatedTranslationFields };
-};
+const { buildCategoryTranslationPlan, buildRetryTargets, LOCALES } = require("./translation_plan");
+const { enqueueCategoryTranslation } = require("../../../../helpers/utils/categoryTranslationEnqueue");
 
 class CategoryCommandDomain {
   constructor(db) {
+    this.db = db;
     this.command = new Command(db);
     this.query = new Query(db);
+  }
+
+  async enqueueTranslations(categoryId, sourceName, sourceDescription, targets, requestedBy = null) {
+    if (!targets.length) return;
+    try {
+      await enqueueCategoryTranslation({
+        db: this.db,
+        categoryId,
+        requestedBy,
+        sourceName,
+        sourceDescription,
+        targets,
+      });
+    } catch (error) {
+      // Category persistence must remain successful even if AI/Redis is unavailable.
+      const message = error?.message || "Translation queue unavailable";
+      await this.db.executeQuery(
+        `UPDATE category_translation_state
+         SET status = 'failed', last_error = $1, updated_at = NOW()
+         WHERE category_id = $2 AND locale = ANY($3::varchar[]) AND status = 'pending'`,
+        [message, categoryId, [...new Set(targets.map((target) => target.locale))]],
+      );
+    }
   }
 
   async createCategory(payload) {
@@ -50,34 +51,43 @@ class CategoryCommandDomain {
       return wrapper.error(new ConflictError("Category name already exists"));
     }
 
-    const { translationValues } = buildTranslationValues(payload.translations);
-    for (const loc of TRANSLATION_LOCALES) {
-      if (payload.translations?.[loc]?.name && !translationValues[`slug_${loc}`]) {
-        return wrapper.error(
-          new BadRequestError(`Category ${loc} name must contain letters or numbers`)
-        );
+    const now = new Date();
+    const id = randomUUID();
+    const plan = buildCategoryTranslationPlan({
+      sourceName: payload.name,
+      sourceDescription: payload.description || "",
+      translations: payload.translations,
+    });
+    for (const locale of LOCALES) {
+      const translatedName = plan.translationValues[`name_${locale}`];
+      if (translatedName && !toSlug(translatedName)) {
+        return wrapper.error(new BadRequestError(`Category ${locale} name must contain letters or numbers`));
       }
     }
 
-    const now = new Date();
     const result = await this.command.insertOne({
-      id: randomUUID(),
+      id,
       name: payload.name,
       slug,
       description: payload.description || null,
       created_at: now,
       updated_at: now,
-      name_en: translationValues.name_en ?? null,
-      slug_en: translationValues.slug_en ?? null,
-      description_en: translationValues.description_en ?? null,
-      name_uz: translationValues.name_uz ?? null,
-      slug_uz: translationValues.slug_uz ?? null,
-      description_uz: translationValues.description_uz ?? null,
+      name_en: plan.translationValues.name_en,
+      slug_en: plan.translationValues.slug_en,
+      description_en: plan.translationValues.description_en,
+      name_uz: plan.translationValues.name_uz,
+      slug_uz: plan.translationValues.slug_uz,
+      description_uz: plan.translationValues.description_uz,
+      translationStates: plan.states,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to create category"));
     }
-    return wrapper.data(result.rows[0]);
+    await this.enqueueTranslations(id, payload.name, payload.description || "", plan.targets);
+    return wrapper.data({
+      ...result.rows[0],
+      translation_statuses: plan.states.map(({ locale, status }) => ({ locale, status })),
+    });
   }
 
   async updateCategory(payload) {
@@ -101,18 +111,19 @@ class CategoryCommandDomain {
       return wrapper.error(new ConflictError("Category name already exists"));
     }
 
-    const { translationValues, updatedTranslationFields } = buildTranslationValues(
-      payload.translations,
-      { patch: true }
-    );
-    for (const loc of TRANSLATION_LOCALES) {
-      if (
-        payload.translations?.[loc]?.name !== undefined &&
-        !translationValues[`slug_${loc}`]
-      ) {
-        return wrapper.error(
-          new BadRequestError(`Category ${loc} name must contain letters or numbers`)
-        );
+    const stateResult = await this.query.findTranslationStates(payload.id);
+    if (!stateResult) return wrapper.error(new InternalServerError("Unable to validate category translations"));
+    const plan = buildCategoryTranslationPlan({
+      sourceName: payload.name,
+      sourceDescription: payload.description || "",
+      translations: payload.translations,
+      currentCategory: current.rows[0],
+      currentStates: stateResult.rows,
+    });
+    for (const locale of LOCALES) {
+      const translatedName = plan.translationValues[`name_${locale}`];
+      if (translatedName && !toSlug(translatedName)) {
+        return wrapper.error(new BadRequestError(`Category ${locale} name must contain letters or numbers`));
       }
     }
 
@@ -122,13 +133,67 @@ class CategoryCommandDomain {
       slug,
       description: payload.description || null,
       updated_at: new Date(),
-      translationValues,
-      updatedTranslationFields,
+      translationValues: plan.translationValues,
+      updatedTranslationFields: [
+        "name_en", "slug_en", "description_en",
+        "name_uz", "slug_uz", "description_uz",
+      ],
+      translationStates: plan.states,
     });
     if (!result) {
       return wrapper.error(new InternalServerError("Unable to update category"));
     }
-    return wrapper.data(result.rows[0]);
+    await this.enqueueTranslations(payload.id, payload.name, payload.description || "", plan.targets);
+    return wrapper.data({
+      ...result.rows[0],
+      translation_statuses: plan.states.map(({ locale, status }) => ({ locale, status })),
+    });
+  }
+
+  async retryCategoryTranslation({ id, locale }) {
+    const categoryResult = await this.query.findOneById(id);
+    if (!categoryResult) return wrapper.error(new InternalServerError("Unable to retrieve category"));
+    if (!categoryResult.rows.length) return wrapper.error(new NotFoundError("Category not found"));
+    const category = categoryResult.rows[0];
+    const stateResult = await this.query.findTranslationStates(id);
+    if (!stateResult) return wrapper.error(new InternalServerError("Unable to retrieve translation status"));
+    const state = stateResult.rows.find((row) => row.locale === locale);
+    if (!state || state.status !== "failed") {
+      return wrapper.error(new BadRequestError("Retry is only available for failed category translations"));
+    }
+
+    const targets = buildRetryTargets(category, state, locale);
+    if (!targets.length) {
+      const ready = Boolean(category[`name_${locale}`]) && (!category.description || Boolean(category[`description_${locale}`]));
+      await this.db.executeQuery(
+        `UPDATE category_translation_state
+         SET status = $1::article_translation_status, last_error = NULL, updated_at = NOW()
+         WHERE category_id = $2 AND locale = $3`,
+        [ready ? "ready" : "none", id, locale],
+      );
+      return wrapper.data({ category_id: id, locale, status: ready ? "ready" : "none" });
+    }
+
+    await this.db.executeQuery(
+      `UPDATE category_translation_state
+       SET status = 'pending', last_error = NULL, updated_at = NOW()
+       WHERE category_id = $1 AND locale = $2 AND status = 'failed'`,
+      [id, locale],
+    );
+    const enqueueResult = await enqueueCategoryTranslation({
+      db: this.db,
+      categoryId: id,
+      sourceName: category.name,
+      sourceDescription: category.description || "",
+      targets,
+    });
+    return wrapper.data({
+      category_id: id,
+      locale,
+      job_id: enqueueResult.jobId || null,
+      status: enqueueResult.queued ? "pending" : "failed",
+      error: enqueueResult.error || null,
+    });
   }
 
   async deleteCategory({ id }) {

@@ -7,8 +7,10 @@ const domain = new Domain(db);
 
 const listCategories = (payload) => domain.listCategories(payload);
 const getCategory = (payload) => domain.getCategory(payload);
+const getCategoryTranslationState = (payload) => domain.getCategoryTranslationState(payload);
 
 module.exports = {
   listCategories,
   getCategory,
+  getCategoryTranslationState,
 };

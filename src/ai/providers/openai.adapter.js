@@ -103,7 +103,7 @@ function normalizeProviderError(error) {
  * Call OpenAI Responses API the same way as egi-media-ai-backend:
  * model + input messages + strict json_schema, no temperature.
  */
-async function callOnce({ system, user, requestId }) {
+async function callOnce({ system, user, requestId, schema = ARTICLE_TRANSLATION_JSON_SCHEMA }) {
   const ai = getAiConfig();
   const client = getClient(ai);
 
@@ -117,9 +117,9 @@ async function callOnce({ system, user, requestId }) {
     text: {
       format: {
         type: "json_schema",
-        name: ARTICLE_TRANSLATION_JSON_SCHEMA.name,
+        name: schema.name,
         strict: true,
-        schema: ARTICLE_TRANSLATION_JSON_SCHEMA.schema,
+        schema: schema.schema,
       },
     },
   };
@@ -147,7 +147,7 @@ async function callOnce({ system, user, requestId }) {
 /**
  * Call OpenAI-compatible Responses API with limited retries (retryable errors only).
  */
-async function completeChat({ system, user, requestId }) {
+async function completeChat({ system, user, requestId, schema = ARTICLE_TRANSLATION_JSON_SCHEMA }) {
   const ai = getAiConfig();
   if (!ai.enabled) {
     const err = new Error("AI translation is disabled");
@@ -167,7 +167,7 @@ async function completeChat({ system, user, requestId }) {
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const result = await callOnce({ system, user, requestId });
+      const result = await callOnce({ system, user, requestId, schema });
       return { ...result, attempt };
     } catch (error) {
       const normalized =

@@ -34,16 +34,16 @@ class CategoryCommand {
     name_uz,
     slug_uz,
     description_uz,
+    translationStates,
   }) {
-    return this.db.executeQuery(
-      `INSERT INTO ${collection} (
+    const categoryQuery = `INSERT INTO ${collection} (
          id, name, slug, description, created_at, updated_at,
          name_en, slug_en, description_en,
          name_uz, slug_uz, description_uz
        )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING ${RETURNING_COLUMNS};`,
-      [
+       RETURNING ${RETURNING_COLUMNS};`;
+    const categoryValues = [
         id,
         name,
         slug,
@@ -56,8 +56,30 @@ class CategoryCommand {
         name_uz ?? null,
         slug_uz ?? null,
         description_uz ?? null,
-      ]
-    );
+      ];
+    const stateValues = translationStates.flatMap((state) => [
+      id,
+      state.locale,
+      state.name_origin,
+      state.description_origin,
+      state.name_source_text,
+      state.description_source_text,
+      state.status,
+      state.last_error,
+    ]);
+    const statePlaceholders = translationStates.map((_, index) => {
+      const start = index * 8;
+      return `($${start + 1}, $${start + 2}, $${start + 3}, $${start + 4}, $${start + 5}, $${start + 6}, $${start + 7}, $${start + 8})`;
+    }).join(", ");
+    const stateQuery = `INSERT INTO category_translation_state (
+       category_id, locale, name_origin, description_origin,
+       name_source_text, description_source_text, status, last_error
+     ) VALUES ${statePlaceholders};`;
+    const results = await this.db.executeTransaction([
+      { query: categoryQuery, values: categoryValues },
+      { query: stateQuery, values: stateValues },
+    ]);
+    return results?.[0] ?? null;
   }
 
   async updateOne({
@@ -68,6 +90,7 @@ class CategoryCommand {
     updated_at,
     translationValues,
     updatedTranslationFields,
+    translationStates,
   }) {
     const setClauses = ["name = $1", "slug = $2", "description = $3", "updated_at = $4"];
     const values = [name, slug, description, updated_at];
@@ -83,13 +106,41 @@ class CategoryCommand {
 
     values.push(id);
 
-    return this.db.executeQuery(
-      `UPDATE ${collection}
+    const categoryQuery = `UPDATE ${collection}
        SET ${setClauses.join(", ")}
        WHERE id = $${idx}
-       RETURNING ${RETURNING_COLUMNS};`,
-      values
-    );
+       RETURNING ${RETURNING_COLUMNS};`;
+    const stateValues = translationStates.flatMap((state) => [
+      id,
+      state.locale,
+      state.name_origin,
+      state.description_origin,
+      state.name_source_text,
+      state.description_source_text,
+      state.status,
+      state.last_error,
+    ]);
+    const statePlaceholders = translationStates.map((_, index) => {
+      const start = index * 8;
+      return `($${start + 1}, $${start + 2}, $${start + 3}, $${start + 4}, $${start + 5}, $${start + 6}, $${start + 7}, $${start + 8})`;
+    }).join(", ");
+    const stateQuery = `INSERT INTO category_translation_state (
+       category_id, locale, name_origin, description_origin,
+       name_source_text, description_source_text, status, last_error
+     ) VALUES ${statePlaceholders}
+     ON CONFLICT (category_id, locale) DO UPDATE SET
+       name_origin = EXCLUDED.name_origin,
+       description_origin = EXCLUDED.description_origin,
+       name_source_text = EXCLUDED.name_source_text,
+       description_source_text = EXCLUDED.description_source_text,
+       status = EXCLUDED.status,
+       last_error = EXCLUDED.last_error,
+       updated_at = NOW();`;
+    const results = await this.db.executeTransaction([
+      { query: categoryQuery, values },
+      { query: stateQuery, values: stateValues },
+    ]);
+    return results?.[0] ?? null;
   }
 
   async deleteOne(id) {

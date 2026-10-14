@@ -111,6 +111,31 @@ class CategoryQueryDomain {
     }
     return wrapper.data(this.mapDetail(result.rows[0], requestedLocale));
   }
+
+  async getCategoryTranslationState({ id }) {
+    const result = await this.query.findTranslationStateDetail(id);
+    if (!result) return wrapper.error(new InternalServerError("Unable to retrieve category translations"));
+    if (!result.rows.length) return wrapper.error(new NotFoundError("Category not found"));
+
+    const category = result.rows[0];
+    const translations = {};
+    const locales = {};
+    for (const locale of TRANSLATION_LOCALES) {
+      const row = result.rows.find((entry) => entry.locale === locale);
+      translations[locale] = {
+        name: category[`name_${locale}`] || "",
+        description: category[`description_${locale}`] || "",
+      };
+      locales[locale] = {
+        status: row?.status || "none",
+        last_error: row?.last_error || null,
+        name_origin: row?.name_origin || null,
+        description_origin: row?.description_origin || null,
+        updated_at: row?.translation_updated_at || null,
+      };
+    }
+    return wrapper.data({ category_id: category.id, translations, locales });
+  }
 }
 
 module.exports = CategoryQueryDomain;

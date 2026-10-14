@@ -21,6 +21,12 @@ const getCategory = async (req, res) => {
   return sendResponse(await queryHandler.getCategory(payload.data), res);
 };
 
+const getCategoryTranslationState = async (req, res) => {
+  const payload = validator.isValidPayload({ id: req.params.id }, commandModel.deleteCategoryParamType);
+  if (payload.err) return sendResponse(payload, res);
+  return sendResponse(await queryHandler.getCategoryTranslationState(payload.data), res);
+};
+
 const createCategory = async (req, res) => {
   const payload = validator.isValidPayload(req.body, commandModel.createCategoryParamType);
   if (payload.err) return sendResponse(payload, res);
@@ -39,10 +45,21 @@ const deleteCategory = async (req, res) => {
   return sendResponse(await commandHandler.deleteCategory(payload.data), res);
 };
 
+const retryCategoryTranslation = async (req, res) => {
+  const payload = validator.isValidPayload(
+    { id: req.params.id, locale: req.body?.locale },
+    commandModel.categoryTranslationRetryParamType,
+  );
+  if (payload.err) return sendResponse(payload, res);
+  return sendResponse(await commandHandler.retryCategoryTranslation(payload.data), res);
+};
+
 module.exports = {
   listCategories,
   getCategory,
+  getCategoryTranslationState,
   createCategory,
   updateCategory,
   deleteCategory,
+  retryCategoryTranslation,
 };

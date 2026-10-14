@@ -56,6 +56,33 @@ class CategoryQuery {
     );
   }
 
+  async findTranslationStates(id) {
+    return this.db.executeQuery(
+      `SELECT locale, name_origin, description_origin,
+              name_source_text, description_source_text, status, last_error,
+              updated_at
+       FROM category_translation_state
+       WHERE category_id = $1
+       ORDER BY locale ASC;`,
+      [id]
+    );
+  }
+
+  async findTranslationStateDetail(id) {
+    return this.db.executeQuery(
+      `SELECT c.id, c.name, c.description,
+              c.name_en, c.slug_en, c.description_en,
+              c.name_uz, c.slug_uz, c.description_uz,
+              s.locale, s.name_origin, s.description_origin,
+              s.status, s.last_error, s.updated_at AS translation_updated_at
+       FROM categories c
+       LEFT JOIN category_translation_state s ON s.category_id = c.id
+       WHERE c.id = $1
+       ORDER BY s.locale ASC;`,
+      [id]
+    );
+  }
+
   async findOneBySlug(slug) {
     return this.db.executeQuery(
       `SELECT ${SELECT_COLUMNS}
