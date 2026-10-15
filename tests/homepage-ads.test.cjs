@@ -63,16 +63,18 @@ test('additive migration preserves legacy IDs, images and counters; exactly thre
 });
 test('upload validates actual binary dimensions, ratio, role and preserves bytes', async () => {
   assert.equal((await upload('LEADERBOARD', 970, 250)).status, 201);
-  const valid = await upload('IN_FEED', 1280, 720); assert.equal(valid.status, 201);
-  assert.equal(valid.body.data.width, 1280); assert.equal(valid.body.data.height, 720);
-  assert.deepEqual([...objects.values()].find(value => value.readUInt32BE(16) === 1280), png(1280, 720));
+  const valid = await upload('IN_FEED', 1080, 1080); assert.equal(valid.status, 201);
+  assert.equal(valid.body.data.width, 1080); assert.equal(valid.body.data.height, 1080);
+  assert.deepEqual([...objects.values()].find(value => value.readUInt32BE(16) === 1080), png(1080, 1080));
   assert.equal((await upload('LEADERBOARD', 1280, 720)).status, 400);
   assert.equal((await upload('IN_FEED', 970, 250)).status, 400);
-  assert.equal((await upload('LATEST_VIDEOS', 1280, 720, 'author')).status, 403);
+  assert.equal((await upload('IN_FEED', 1280, 720)).status, 400);
+  assert.equal((await upload('LATEST_VIDEOS', 1280, 720)).status, 400);
+  assert.equal((await upload('LATEST_VIDEOS', 1080, 1080, 'author')).status, 403);
   assert.equal((await upload('UNKNOWN', 1280, 720)).status, 400);
 });
 test('one uploaded creative can fill two slots with independent counters; receipts reject forgery', async () => {
-  const { body } = await upload('IN_FEED', 1280, 720);
+  const { body } = await upload('IN_FEED', 1080, 1080);
   const payload = { title: 'Shared local creative', image_url: body.data.url, image_receipt: body.data.image_receipt, target_url: 'https://example.test', is_active: true };
   const newsId = '11111111-1111-4111-8111-111111111111', videoId = '00000000-0000-4000-8000-000000004005';
   assert.equal((await write(newsId, payload)).status, 200); assert.equal((await write(videoId, payload)).status, 200);
@@ -84,7 +86,7 @@ test('one uploaded creative can fill two slots with independent counters; receip
   const rows = (await pg.query('SELECT id,clicks FROM ads WHERE id=ANY($1::uuid[])', [[newsId, videoId]])).rows;
   assert.equal(rows.find(row => row.id === newsId).clicks, 7); assert.equal(rows.find(row => row.id === videoId).clicks, 1);
   const publicAds = await (await fetch(`${base}/api/v1/ads/active?placement=LATEST_VIDEOS`)).json();
-  assert.equal(publicAds.data[0].image_width, 1280); assert.equal(publicAds.data[0].image_receipt, undefined);
+  assert.equal(publicAds.data[0].image_width, 1080); assert.equal(publicAds.data[0].image_receipt, undefined);
 });
 test('empty inactive slot saves; activation without creative fails; legacy unchanged asset remains compatible', async () => {
   const id = '00000000-0000-4000-8000-000000004001';
