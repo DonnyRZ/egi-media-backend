@@ -2,7 +2,7 @@ const { createHmac, timingSafeEqual } = require("node:crypto");
 const { imageSize } = require("image-size");
 const config = require("../../config/global_config");
 
-const RATIOS = { LEADERBOARD: 97 / 25, IN_FEED: 1, LATEST_VIDEOS: 1 };
+const RATIOS = { LEADERBOARD: 97 / 25, HERO_BELOW: 16 / 9, IN_FEED: 1, LATEST_VIDEOS: 1 };
 const FORMATS = { png: "image/png", jpg: "image/jpeg", webp: "image/webp", avif: "image/avif" };
 
 function validateDimensions(placement, width, height) {
@@ -11,7 +11,8 @@ function validateDimensions(placement, width, height) {
     throw new Error("Invalid advertisement image dimensions or placement");
   }
   if (Math.abs(width / height / ratio - 1) > 0.005) {
-    const expected = placement === "LEADERBOARD" ? "970×250 (97:25)" : "1080×1080 (1:1)";
+    const expected = placement === "LEADERBOARD" ? "970×250 (97:25)"
+      : placement === "HERO_BELOW" ? "1280×720 (16:9)" : "1080×1080 (1:1)";
     throw new Error(`Image is ${width}×${height}. This slot requires ${expected}.`);
   }
 }

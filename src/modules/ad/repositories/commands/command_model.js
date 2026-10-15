@@ -3,6 +3,7 @@ const joi = require("joi");
 /** Active public / CMS ad placements. */
 const PLACEMENTS = [
   "LEADERBOARD",
+  "HERO_BELOW",
   "IN_FEED",
   "SIDEBAR_RECTANGLE",
   "LATEST_VIDEOS",

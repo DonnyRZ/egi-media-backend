@@ -43,10 +43,11 @@ class AdQuery {
       ORDER BY
         CASE placement
           WHEN 'LEADERBOARD' THEN 1
-          WHEN 'IN_FEED' THEN 2
-          WHEN 'SIDEBAR_RECTANGLE' THEN 3
-          WHEN 'LATEST_VIDEOS' THEN 3
-          ELSE 4
+          WHEN 'HERO_BELOW' THEN 2
+          WHEN 'IN_FEED' THEN 3
+          WHEN 'LATEST_VIDEOS' THEN 4
+          WHEN 'SIDEBAR_RECTANGLE' THEN 5
+          ELSE 6
         END,
         created_at ASC
       LIMIT $2 OFFSET $3;
